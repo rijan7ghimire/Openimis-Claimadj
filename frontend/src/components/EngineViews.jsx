@@ -48,7 +48,7 @@ export function Engine2Flags({ detail, refData }) {
       <p className="small" style={{ margin: '.3rem 0 0' }}>Found <b>{detail.history_size}</b> earlier claim{detail.history_size === 1 ? '' : 's'} for this identity — across every facility and <b>both schemes</b>. Rules R1–R5 compare the new claim with each of them; STG checks the lines against the treatment protocol.</p>
     </div>}
     {flags.slice(0, Math.max(0, k - 2)).map((f, i) => <div key={i} className={`flag ${f.weight}`}>
-      <div className="row between"><div className="row"><RuleTag rule={f.rule} weight={f.weight} /><b>{f.name}</b></div><Pill tone={f.weight === 'high' ? 'red' : 'gold'}>{f.weight} · +{refData?.weights[f.weight]}</Pill></div>
+      <div className="row between"><div className="row"><RuleTag rule={f.rule} weight={f.weight} /><b>{f.name}</b></div><Pill tone={f.weight === 'high' ? 'red' : 'gold'}>{f.weight} · +{f.points ?? refData?.weights[f.weight]}</Pill></div>
       <div className="because"><b>Because:</b> {f.because}</div>
       <div className="src">source: {f.source}{f.matched && <> · matched claim <span className="mono">{f.matched}</span></>}</div>
     </div>)}

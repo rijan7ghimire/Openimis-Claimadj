@@ -29,6 +29,41 @@ const GAPS = [
   ['Four names for one field', 'Legacy database columns, Django fields, GraphQL fields and FHIR elements all differ.', 'FHIR names are the canonical ones; a crosswalk maps the rest (03_naming_standards).'],
 ];
 
+/* The ontology's own facts, so the competency questions below are answered from data, not prose. */
+const RULES_TERMS = {
+  R1: { uses: ['Claim', 'Membership', 'Scheme', 'ClaimLine'], detects: 'ftDuplicateClaim', flag: 'rfSameServiceSameDay' },
+  R2: { uses: ['Claim', 'HealthFacility', 'Beneficiary'], detects: 'ftUnbundling', flag: 'rfSameEpisodeSplit' },
+  R3: { uses: ['Claim', 'IdentityKey', 'Scheme', 'Diagnosis'], detects: 'ftCrossSchemeDoubleClaim', flag: 'rfSamePersonTwoPayers' },
+  R4: { uses: ['Claim', 'HealthFacility'], detects: 'ftImpossibleClinicalSequence', flag: 'rfImpossibleSequence' },
+  R5: { uses: ['Claim', 'RejectionReason', 'Diagnosis'], detects: 'ftResubmissionGaming', flag: 'rfRejectedThenReentered' },
+  STG: { uses: ['Claim', 'Diagnosis', 'TreatmentProtocol', 'ClaimLine'], detects: 'ftUpcoding · ftUnnecessaryServices', flag: 'rfDiagnosisTreatmentMismatch' },
+};
+const FRAUD_TYPES = ['ftDuplicateClaim', 'ftCrossSchemeDoubleClaim', 'ftUnbundling', 'ftUpcoding', 'ftPhantomHospitalisation', 'ftForgedDocuments', 'ftInflatedBillsExtendedStay', 'ftUnnecessaryServices', 'ftImpersonation', 'ftNonDisclosure', 'ftCollusionKickbacks', 'ftClaimsForDeceased', 'ftImpossibleClinicalSequence', 'ftResubmissionGaming', 'ftDutyHourBilling', 'ftStagedRescue'];
+const RED_FLAGS = ['rfSameServiceSameDay', 'rfSameEpisodeSplit', 'rfSamePersonTwoPayers', 'rfImpossibleSequence', 'rfRejectedThenReentered', 'rfDiagnosisTreatmentMismatch', 'rfMissingNmcNumber', 'rfSameProviderManyFacilities', 'rfServiceAfterDeath'];
+const covered = new Set(Object.values(RULES_TERMS).flatMap(r => r.detects.split(' · ')));
+const flagsUsed = new Set(Object.values(RULES_TERMS).map(r => r.flag));
+const CQ = [
+  ['Which rules depend on the IdentityKey (and therefore on National-ID coverage)?', Object.entries(RULES_TERMS).filter(([, r]) => r.uses.includes('IdentityKey')).map(([k]) => k).join(', ') + ' — every rule reads the claim history through the identity index, but only R3 joins across schemes'],
+  ['Which fraud types in the typology have a rule?', [...covered].join(', ')],
+  ['Which fraud types have no rule at all?', FRAUD_TYPES.filter(f => !covered.has(f)).join(', ') + ` (${FRAUD_TYPES.filter(f => !covered.has(f)).length} of ${FRAUD_TYPES.length})`],
+  ['Which red flags are known but unused by any rule?', RED_FLAGS.filter(f => !flagsUsed.has(f)).join(', ')],
+  ['Which classes does the STG rule need that openIMIS does not have?', 'TreatmentProtocol (elicited) — Diagnosis and ClaimLine exist in openIMIS but are never compared'],
+  ['What does a reviewer decision change?', 'the Claim\'s ReviewDecision and RejectionReason (6 on confirm), and the weight of every DetectionRule that fired — recorded with provenance'],
+];
+const GLOSSARY = [
+  ['HIB', 'Health Insurance Board — Nepal\'s national social health insurance scheme (family policies, live since 2016)'],
+  ['SSF', 'Social Security Fund — contribution-based scheme for formal-sector workers; uses the openIMIS claims module over its SoSys core'],
+  ['openIMIS', 'the open-source insurance management system both schemes run, each in its own instance'],
+  ['CHFID', 'the HIB member number printed on the card (from a pre-minted pool); scheme-local'],
+  ['National ID', 'Government of Nepal identifier; recorded for only part of the members; the only cross-scheme key'],
+  ['NMC number', 'Nepal Medical Council registration of the treating doctor; HIB stores it on the claim and rejects prescriptions without it'],
+  ['Bikram Sambat', 'Nepal\'s official calendar; claim codes carry the fiscal year, e.g. 2083-084'],
+  ['Medical Officer', 'the clinician-reviewer at HIB or SSF who decides on a sampled or flagged claim'],
+  ['Claim vault', 'SSF\'s holding area for claims sharing hospital + contributor + visit date, pending review'],
+  ['Standard treatment protocol', 'the national guideline of what a diagnosis warrants; the basis of the STG rule'],
+  ['Reason 6', 'the openIMIS rejection reason "Item/Service duplicated" — present in the reviewer UI, disabled in the code'],
+];
+
 const SOURCES = [
   ['openIMIS — Nepal / Health Insurance', 'https://openimis.org/nepal-health-insurance'],
   ['openIMIS wiki — Social Security Fund Nepal', 'https://openimis.atlassian.net/wiki/spaces/OP/pages/3590750368/Social+Security+Fund+Nepal'],
@@ -74,6 +109,18 @@ export default function Ontology() {
         <tbody>{GAPS.map(([g, t, o]) => <tr key={g}><td>{g}</td><td className="small">{t}</td><td className="small">{o}</td></tr>)}</tbody></table>
     </div>
     <p className="small mt">The rules themselves, with their thresholds and live counts, are on the <Link to="/rules">Rules page</Link>.</p>
+
+    <h2>4 · Competency questions <small>answered from the ontology's own terms, not from prose</small></h2>
+    <div className="card" style={{ padding: 0, overflow: 'auto' }}>
+      <table className="std-table"><thead><tr><th>Question</th><th>Answer</th></tr></thead>
+        <tbody>{CQ.map(([q, a]) => <tr key={q}><td style={{ whiteSpace: 'normal' }}>{q}</td><td className="small mono" style={{ whiteSpace: 'normal' }}>{a}</td></tr>)}</tbody></table>
+    </div>
+    <p className="std-note mt">The full ontology (697 triples) is <a href={import.meta.env.BASE_URL + 'claim_adjudication.ttl'} target="_blank" rel="noreferrer">claim_adjudication.ttl</a>; the same questions run as SPARQL against it in <span className="mono">Week 3-4/ontology</span>.</p>
+
+    <h2>5 · Glossary <small>for readers outside Nepal</small></h2>
+    <div className="card" style={{ padding: 0, overflow: 'auto' }}>
+      <table className="std-table"><tbody>{GLOSSARY.map(([t, d]) => <tr key={t}><td>{t}</td><td className="small">{d}</td></tr>)}</tbody></table>
+    </div>
 
     <details className="mt"><summary className="small mute" style={{ cursor: 'pointer' }}>Sources</summary>
       <ol className="small mute" style={{ margin: '.3rem 0 0 1.1rem', padding: 0 }}>{SOURCES.map(([t, u]) => <li key={t}>{u ? <a href={u} target="_blank" rel="noreferrer">{t}</a> : t}</li>)}</ol>

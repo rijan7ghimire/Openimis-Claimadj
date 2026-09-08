@@ -1,7 +1,8 @@
 // Two transports behind one `api` object:
 //  - default: HTTP calls to the Express backend (npm run dev / npm start)
 //  - VITE_STATIC=true: the whole engine runs in the browser (GitHub Pages build) — backend/engine + backend/api.js
-//    are bundled, and the claim book is fetched once from <base>/data/claims.json.
+//    are bundled, and the claim book is fetched once from <base>/data/claims.json. The honest-evaluation results are
+//    precomputed by backend/evaluate.js and shipped as data/evaluation.json in both modes.
 const STATIC = import.meta.env.VITE_STATIC === 'true';
 
 const j = async (r) => { if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || r.statusText); } return r.json(); };
@@ -20,6 +21,8 @@ const httpApi = {
   review: (id, decision, note, reviewer) => post('/api/review/' + id, { decision, note, reviewer }),
   settle: (id) => post(`/api/claims/${id}/settle`),
   metrics: () => get('/api/metrics'),
+  providers: () => get('/api/providers'),
+  evaluation: () => get('/api/evaluation'),
 };
 
 let localReady = null;
@@ -39,7 +42,8 @@ const call = (name) => async (...args) => { const a = await local(); return JSON
 const localApi = {
   reference: call('reference'), persons: call('persons'), personHistory: call('personHistory'), scenarios: call('scenarios'),
   loadScenario: call('loadScenario'), submit: call('submit'), claim: call('claim'), queue: call('queue'),
-  review: call('review'), settle: call('settle'), metrics: call('metrics'),
+  review: call('review'), settle: call('settle'), metrics: call('metrics'), providers: call('providers'),
+  evaluation: () => fetch(import.meta.env.BASE_URL + 'data/evaluation.json').then(j),
 };
 
 export const api = STATIC ? localApi : httpApi;

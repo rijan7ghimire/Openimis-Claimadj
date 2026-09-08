@@ -1,0 +1,349 @@
+@prefix hic:   <https://w3id.org/hic-nepal/ontology#> .
+@prefix rule:  <https://w3id.org/hic-nepal/rule/> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix fhir:  <http://hl7.org/fhir/> .
+
+###############################################################################
+#  HIC — Health Insurance Claim adjudication & fraud-detection ontology (Nepal)
+#  Knowledge-engineering case study · openIMIS · HIB + SSF
+#  Naming: classes UpperCamelCase singular nouns; object properties lowerCamelCase
+#  verb phrases; data properties lowerCamelCase nouns; individuals lowerCamelCase or
+#  the authoritative code. Every term carries rdfs:label and skos:definition.
+###############################################################################
+
+<https://w3id.org/hic-nepal/ontology>
+    a owl:Ontology ;
+    owl:versionIRI <https://w3id.org/hic-nepal/ontology/0.3> ;
+    owl:versionInfo "0.3 (2026-09-08)" ;
+    dct:title "HIC — Health Insurance Claim adjudication and fraud-detection ontology (Nepal)"@en ;
+    dct:creator "KE case-study team: Grishma Rijal, Rijan Ghimire, Milan Maharjan, Biwash Budhathoki" ;
+    dct:description "Domain ontology for claim adjudication in openIMIS as run by Nepal's Health Insurance Board (HIB) and Social Security Fund (SSF), extended with the concepts a knowledge-based duplicate & cross-scheme fraud detector needs: resolved identity, claim history across schemes, detection rules, red flags, flags and reviewer decisions. Vocabulary aligned with HL7 FHIR R4 (Claim, ClaimResponse, Coverage), the openIMIS claim data model, and the World Bank / NHCAA fraud typologies."@en ;
+    rdfs:seeAlso <https://fhir.openimis.org/> , <https://github.com/openimis/openimis-be-claim_py> .
+
+###############################################################################
+#  1. PEOPLE, SCHEMES, COVERAGE
+###############################################################################
+
+hic:Person a owl:Class ; rdfs:label "Person"@en ;
+    skos:definition "A natural person known to at least one scheme or facility."@en .
+hic:Beneficiary a owl:Class ; rdfs:subClassOf hic:Person ; rdfs:label "Beneficiary"@en ;
+    skos:definition "A person entitled to benefits under at least one scheme (openIMIS: Insuree; FHIR: Patient)."@en ;
+    skos:exactMatch fhir:Patient .
+hic:Practitioner a owl:Class ; rdfs:subClassOf hic:Person ; rdfs:label "Practitioner"@en ;
+    skos:definition "A treating doctor identified by a Nepal Medical Council registration number (HIB stores it in Claim.guaranteeId)."@en ;
+    skos:exactMatch fhir:Practitioner .
+hic:Reviewer a owl:Class ; rdfs:subClassOf hic:Person ; rdfs:label "Reviewer"@en ;
+    skos:definition "A scheme staff member who adjudicates claims manually."@en .
+hic:MedicalOfficer a owl:Class ; rdfs:subClassOf hic:Reviewer ; rdfs:label "Medical Officer"@en ;
+    skos:definition "A clinically qualified reviewer who delivers the review verdict on a claim."@en .
+
+hic:Scheme a owl:Class ; rdfs:label "Scheme"@en ;
+    skos:definition "A payer that reimburses facilities for care given to its beneficiaries; each scheme runs its own openIMIS instance and ledger."@en ;
+    skos:closeMatch fhir:Organization .
+hic:hib a hic:Scheme ; rdfs:label "Health Insurance Board (HIB)"@en ;
+    skos:definition "Nepal's national social health-insurance scheme (Health Insurance Act 2017): family policy NPR 3,500 / year for NPR 100,000 cover."@en .
+hic:ssf a hic:Scheme ; rdfs:label "Social Security Fund (SSF)"@en ;
+    skos:definition "Nepal's contributory social-security scheme for formal-sector workers; uses openIMIS for its medical-benefit claims."@en .
+
+hic:Membership a owl:Class ; rdfs:label "Membership"@en ;
+    skos:definition "The enrolment of a beneficiary in one scheme, carrying that scheme's own member number (HIB: CHFID; SSF: contributor number). A beneficiary with two memberships is dual-enrolled."@en ;
+    skos:closeMatch fhir:Coverage .
+hic:Policy a owl:Class ; rdfs:label "Policy"@en ;
+    skos:definition "A time-bounded contract under a product that makes a family eligible (openIMIS: Policy; status active / expired / suspended)."@en .
+hic:Product a owl:Class ; rdfs:label "Product (benefit package)"@en ;
+    skos:definition "The benefit package a policy is written under: covered services, price list, ceilings, co-payments, waiting periods (openIMIS: Product)."@en .
+
+hic:hasMembership a owl:ObjectProperty ; rdfs:domain hic:Beneficiary ; rdfs:range hic:Membership ; rdfs:label "has membership"@en .
+hic:underScheme  a owl:ObjectProperty ; rdfs:domain hic:Membership ; rdfs:range hic:Scheme ; rdfs:label "under scheme"@en .
+hic:holdsPolicy  a owl:ObjectProperty ; rdfs:domain hic:Membership ; rdfs:range hic:Policy ; rdfs:label "holds policy"@en .
+hic:underProduct a owl:ObjectProperty ; rdfs:domain hic:Policy ; rdfs:range hic:Product ; rdfs:label "under product"@en .
+hic:memberNumber a owl:DatatypeProperty ; rdfs:domain hic:Membership ; rdfs:range xsd:string ; rdfs:label "member number"@en ;
+    skos:definition "The scheme-specific identifier of a membership (HIB CHFID or SSF contributor number). Scheme-local: cannot join records across schemes."@en .
+hic:policyActive a owl:DatatypeProperty ; rdfs:domain hic:Policy ; rdfs:range xsd:boolean ; rdfs:label "policy active"@en .
+
+###############################################################################
+#  2. IDENTITY
+###############################################################################
+
+hic:Identifier a owl:Class ; rdfs:label "Identifier"@en ;
+    skos:definition "A string that names a person, facility or claim within some issuing system."@en .
+hic:NationalId a owl:Class ; rdfs:subClassOf hic:Identifier ; rdfs:label "National ID"@en ;
+    skos:definition "Nepal's National Identity number — the only person identifier that is the same across HIB and SSF; coverage is partial."@en .
+hic:CitizenshipNumber a owl:Class ; rdfs:subClassOf hic:Identifier ; rdfs:label "Citizenship number"@en ; skos:definition "The number on a Nepali citizenship certificate; a common identifier at enrolment where no National ID exists."@en .
+hic:NmcRegistrationNumber a owl:Class ; rdfs:subClassOf hic:Identifier ; rdfs:label "NMC registration number"@en ;
+    skos:definition "Nepal Medical Council registration of a practitioner; HIB rejects prescriptions that lack it."@en .
+hic:IdentityKey a owl:Class ; rdfs:label "Resolved identity key"@en ;
+    skos:definition "The key a detector uses to decide that two records are the same person: the National ID when present, otherwise a composite of normalised name, date of birth and sex."@en .
+hic:hasIdentifier a owl:ObjectProperty ; rdfs:domain hic:Person ; rdfs:range hic:Identifier ; rdfs:label "has identifier"@en .
+hic:resolvesTo a owl:ObjectProperty ; rdfs:domain hic:Beneficiary ; rdfs:range hic:IdentityKey ; rdfs:label "resolves to"@en .
+hic:resolutionMethod a owl:DatatypeProperty ; rdfs:domain hic:IdentityKey ; rdfs:range xsd:string ; rdfs:label "resolution method"@en ;
+    skos:definition "'NID' (exact, cross-scheme) or 'COMPOSITE' (name + DOB + sex; fails on spelling variants)."@en .
+hic:nationalIdNumber a owl:DatatypeProperty ; rdfs:domain hic:Person ; rdfs:range xsd:string ; rdfs:label "national ID number"@en .
+hic:nmcNumber a owl:DatatypeProperty ; rdfs:domain hic:Practitioner ; rdfs:range xsd:string ; rdfs:label "NMC number"@en .
+
+###############################################################################
+#  3. FACILITIES AND PLACE
+###############################################################################
+
+hic:HealthFacility a owl:Class ; rdfs:label "Health facility"@en ;
+    skos:definition "A provider empanelled by a scheme (openIMIS: HealthFacility, level H/C/D, care type I/O/B)."@en ;
+    skos:exactMatch fhir:Organization .
+hic:Hospital a owl:Class ; rdfs:subClassOf hic:HealthFacility ; rdfs:label "Hospital"@en ; skos:definition "A facility that admits inpatients and provides outpatient care (openIMIS level H, care type B)."@en .
+hic:PrimaryHealthCareCentre a owl:Class ; rdfs:subClassOf hic:HealthFacility ; rdfs:label "Primary health care centre"@en ; skos:definition "A first-referral outpatient facility below hospital level (openIMIS level C)."@en .
+hic:HealthPost a owl:Class ; rdfs:subClassOf hic:HealthFacility ; rdfs:label "Health post"@en ; skos:definition "The lowest-level outpatient facility, usually one per ward or village (openIMIS level D)."@en .
+hic:AdministrativeArea a owl:Class ; rdfs:label "Administrative area"@en ; skos:definition "A node of Nepal's administrative hierarchy (province, district, municipality, ward) as held in the openIMIS location tree."@en .
+hic:Province a owl:Class ; rdfs:subClassOf hic:AdministrativeArea ; rdfs:label "Province"@en ; skos:definition "One of Nepal's seven provinces (openIMIS location type R; ISO 3166-2:NP)."@en .
+hic:District a owl:Class ; rdfs:subClassOf hic:AdministrativeArea ; rdfs:label "District"@en ; skos:definition "One of Nepal's 77 districts (openIMIS location type D)."@en .
+hic:Municipality a owl:Class ; rdfs:subClassOf hic:AdministrativeArea ; rdfs:label "Municipality"@en ; skos:definition "A local level (municipality / rural municipality) inside a district (openIMIS location type W)."@en .
+hic:Ward a owl:Class ; rdfs:subClassOf hic:AdministrativeArea ; rdfs:label "Ward"@en ; skos:definition "The smallest administrative unit inside a municipality (openIMIS location type V, historically 'village')."@en .
+hic:locatedIn a owl:ObjectProperty , owl:TransitiveProperty ; rdfs:range hic:AdministrativeArea ; rdfs:label "located in"@en .
+hic:empanelledBy a owl:ObjectProperty ; rdfs:domain hic:HealthFacility ; rdfs:range hic:Scheme ; rdfs:label "empanelled by"@en .
+hic:employs a owl:ObjectProperty ; rdfs:domain hic:HealthFacility ; rdfs:range hic:Practitioner ; rdfs:label "employs"@en .
+
+###############################################################################
+#  4. CLINICAL CONTENT AND THE STANDARD TREATMENT PROTOCOL
+###############################################################################
+
+hic:CareEpisode a owl:Class ; rdfs:label "Care episode"@en ;
+    skos:definition "One patient, one facility, one admission or visit: the unit that should map to exactly one claim (the SSF 'vault' key)."@en ;
+    skos:closeMatch fhir:Encounter .
+hic:Diagnosis a owl:Class ; rdfs:label "Diagnosis"@en ;
+    skos:definition "An ICD-10 coded condition (openIMIS: Diagnosis / tblICDCodes)."@en .
+hic:BillableItem a owl:Class ; rdfs:label "Billable item"@en ;
+    skos:definition "Anything that can appear on a claim line and has a price-list entry."@en .
+hic:Service a owl:Class ; rdfs:subClassOf hic:BillableItem ; rdfs:label "Service"@en ; skos:definition "A procedure, consultation, investigation or bed-day that a facility performs (openIMIS: Service / tblServices)."@en .
+hic:MedicalItem a owl:Class ; rdfs:subClassOf hic:BillableItem ; rdfs:label "Medical item (drug / consumable)"@en ; skos:definition "A drug or consumable dispensed to the patient (openIMIS: Item / tblItems)."@en .
+hic:TreatmentProtocol a owl:Class ; rdfs:label "Standard treatment protocol"@en ;
+    skos:definition "For a diagnosis: the clinical lines that fit it, the generic admission lines any inpatient stay may carry, and a typical maximum length of stay. Elicited from the HIB expert; openIMIS has no such check (reason 8 disabled)."@en .
+hic:forDiagnosis a owl:ObjectProperty ; rdfs:domain hic:TreatmentProtocol ; rdfs:range hic:Diagnosis ; rdfs:label "for diagnosis"@en .
+hic:allowsItem a owl:ObjectProperty ; rdfs:domain hic:TreatmentProtocol ; rdfs:range hic:BillableItem ; rdfs:label "allows item"@en .
+hic:maxLengthOfStayDays a owl:DatatypeProperty ; rdfs:domain hic:TreatmentProtocol ; rdfs:range xsd:integer ; rdfs:label "maximum length of stay (days)"@en .
+hic:icdCode a owl:DatatypeProperty ; rdfs:domain hic:Diagnosis ; rdfs:range xsd:string ; rdfs:label "ICD-10 code"@en .
+hic:itemCode a owl:DatatypeProperty ; rdfs:domain hic:BillableItem ; rdfs:range xsd:string ; rdfs:label "item code"@en .
+hic:unitPriceNpr a owl:DatatypeProperty ; rdfs:domain hic:BillableItem ; rdfs:range xsd:decimal ; rdfs:label "unit price (NPR)"@en .
+
+###############################################################################
+#  5. THE CLAIM
+###############################################################################
+
+hic:Claim a owl:Class ; rdfs:label "Claim"@en ;
+    skos:definition "A facility's request to a scheme for reimbursement of one care episode (openIMIS: Claim / tblClaim; FHIR: Claim)."@en ;
+    skos:exactMatch fhir:Claim .
+hic:ClaimLine a owl:Class ; rdfs:label "Claim line"@en ;
+    skos:definition "One billed service or item with quantity and asked price (openIMIS: ClaimService / ClaimItem; FHIR: Claim.item)."@en .
+hic:ClaimAttachment a owl:Class ; rdfs:label "Claim attachment"@en ;
+    skos:definition "Supporting document: discharge summary or OPD ticket, prescription, invoice, test requisition."@en .
+hic:ClaimStatus a owl:Class ; rdfs:label "Claim status"@en ; skos:definition "The lifecycle state of a claim in openIMIS: Entered 2 → Checked 4 → Processed 8 → Valuated 16, or Rejected 1."@en .
+hic:ReviewStatus a owl:Class ; rdfs:label "Review status"@en ; skos:definition "Whether a claim was selected for, and received, a manual review: Idle 1, Not selected 2, Selected 4, Delivered 8, Bypassed 16."@en .
+hic:RejectionReason a owl:Class ; rdfs:label "Rejection reason"@en ;
+    skos:definition "The coded reason openIMIS or a reviewer gives when a claim or line is rejected (claim/validations.py:33-52)."@en .
+
+# statuses (openIMIS claim/models.py:256-272)
+hic:entered   a hic:ClaimStatus ; rdfs:label "Entered (2)"@en .
+hic:checked   a hic:ClaimStatus ; rdfs:label "Checked (4)"@en .
+hic:processed a hic:ClaimStatus ; rdfs:label "Processed (8)"@en .
+hic:valuated  a hic:ClaimStatus ; rdfs:label "Valuated (16)"@en .
+hic:rejected  a hic:ClaimStatus ; rdfs:label "Rejected (1)"@en .
+hic:reviewIdle a hic:ReviewStatus ; rdfs:label "Idle (1)"@en .
+hic:reviewSelected a hic:ReviewStatus ; rdfs:label "Selected (4)"@en .
+hic:reviewDelivered a hic:ReviewStatus ; rdfs:label "Delivered (8)"@en .
+hic:reviewBypassed a hic:ReviewStatus ; rdfs:label "Bypassed (16)"@en .
+
+# rejection reasons (subset; 6 and 8 are commented out in the source)
+hic:reason2  a hic:RejectionReason ; rdfs:label "2 NOT_IN_PRICE_LIST"@en .
+hic:reason5  a hic:RejectionReason ; rdfs:label "5 FREQUENCY_FAILURE"@en ; skos:note "runs only if item.frequency > 0" .
+hic:reason6  a hic:RejectionReason ; rdfs:label "6 DUPLICATED (disabled in openIMIS)"@en ;
+    skos:note "REJECTION_REASON_DUPLICATED = 6 is commented out (validations.py:38); the reviewer UI still labels it 'Item/Service duplicated' — the outcome our detector feeds." .
+hic:reason8  a hic:RejectionReason ; rdfs:label "8 ICD_NOT_IN_LIST (disabled in openIMIS)"@en .
+hic:reason9  a hic:RejectionReason ; rdfs:label "9 TARGET_DATE"@en .
+hic:reason10 a hic:RejectionReason ; rdfs:label "10 CARE_TYPE"@en .
+hic:reason16 a hic:RejectionReason ; rdfs:label "16 QTY_OVER_LIMIT"@en .
+hic:reason21 a hic:RejectionReason ; rdfs:label "21 NO_COVERAGE"@en .
+hic:reasonMo a hic:RejectionReason ; rdfs:label "-1 Rejected by a Medical Officer"@en .
+hic:reasonAi a hic:RejectionReason ; rdfs:label "-2 Rejected by AI (claim_ai_quality)"@en .
+
+hic:submittedBy   a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:HealthFacility ; rdfs:label "submitted by"@en .
+hic:submittedTo   a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:Scheme ; rdfs:label "submitted to"@en .
+hic:forBeneficiary a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:Beneficiary ; rdfs:label "for beneficiary"@en .
+hic:underMembership a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:Membership ; rdfs:label "under membership"@en .
+hic:treatedBy     a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:Practitioner ; rdfs:label "treated by"@en .
+hic:forEpisode    a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:CareEpisode ; rdfs:label "for episode"@en .
+hic:hasDiagnosis  a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:Diagnosis ; rdfs:label "has diagnosis"@en .
+hic:hasLine       a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:ClaimLine ; rdfs:label "has line"@en .
+hic:bills         a owl:ObjectProperty ; rdfs:domain hic:ClaimLine ; rdfs:range hic:BillableItem ; rdfs:label "bills"@en .
+hic:hasAttachment a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:ClaimAttachment ; rdfs:label "has attachment"@en .
+hic:hasStatus     a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:ClaimStatus ; rdfs:label "has status"@en .
+hic:hasReviewStatus a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:ReviewStatus ; rdfs:label "has review status"@en .
+hic:rejectedFor   a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:RejectionReason ; rdfs:label "rejected for"@en .
+hic:claimCode     a owl:DatatypeProperty ; rdfs:domain hic:Claim ; rdfs:range xsd:string ; rdfs:label "claim code"@en ;
+    skos:definition "Bikram-Sambat fiscal-year code, e.g. 2083-084-000123 (claim.utils.autogenerate_nepali_claim_code). Unique only within a scheme."@en .
+hic:dateFrom      a owl:DatatypeProperty ; rdfs:domain hic:Claim ; rdfs:range xsd:date ; rdfs:label "date from"@en .
+hic:dateTo        a owl:DatatypeProperty ; rdfs:domain hic:Claim ; rdfs:range xsd:date ; rdfs:label "date to"@en .
+hic:dateClaimed   a owl:DatatypeProperty ; rdfs:domain hic:Claim ; rdfs:range xsd:date ; rdfs:label "date claimed"@en .
+hic:careType      a owl:DatatypeProperty ; rdfs:domain hic:Claim ; rdfs:range xsd:string ; rdfs:label "care type (I inpatient / O outpatient)"@en .
+hic:claimedAmountNpr  a owl:DatatypeProperty ; rdfs:domain hic:Claim ; rdfs:range xsd:decimal ; rdfs:label "claimed amount (NPR)"@en .
+hic:approvedAmountNpr a owl:DatatypeProperty ; rdfs:domain hic:Claim ; rdfs:range xsd:decimal ; rdfs:label "approved amount (NPR)"@en .
+hic:quantity      a owl:DatatypeProperty ; rdfs:domain hic:ClaimLine ; rdfs:range xsd:decimal ; rdfs:label "quantity"@en .
+hic:priceAskedNpr a owl:DatatypeProperty ; rdfs:domain hic:ClaimLine ; rdfs:range xsd:decimal ; rdfs:label "price asked (NPR)"@en .
+
+###############################################################################
+#  6. ADJUDICATION PROCESS (HIB workflow + the reviewer's checklist)
+###############################################################################
+
+hic:WorkflowHop a owl:Class ; rdfs:label "Workflow hop"@en ;
+    skos:definition "One step of HIB's 'Workflow for Claim Processing' (three lanes: patient visit, facility submission, HIB adjudication)."@en .
+hic:AdjudicationStep a owl:Class ; rdfs:subClassOf hic:WorkflowHop ; rdfs:label "Adjudication step"@en ;
+    skos:definition "The standard funnel: intake validation → eligibility → benefit matching → medical necessity & coding → pricing → final determination."@en .
+hic:ReviewerCheck a owl:Class ; rdfs:label "Reviewer check"@en ;
+    skos:definition "One category of what a human adjudicator verifies (13 compiled categories)."@en .
+hic:precedes a owl:ObjectProperty , owl:TransitiveProperty ; rdfs:domain hic:WorkflowHop ; rdfs:range hic:WorkflowHop ; rdfs:label "precedes"@en .
+hic:performedBy a owl:ObjectProperty ; rdfs:domain hic:WorkflowHop ; rdfs:label "performed by"@en .
+hic:isProposed a owl:DatatypeProperty ; rdfs:domain hic:WorkflowHop ; rdfs:range xsd:boolean ; rdfs:label "is proposed (not in HIB's workflow today)"@en .
+
+hic:hopMembershipVerification a hic:WorkflowHop ; rdfs:label "Membership verification through openIMIS"@en ; hic:precedes hic:hopCardAndCare .
+hic:hopCardAndCare a hic:WorkflowHop ; rdfs:label "Hospital card issued; care per benefit package"@en ; hic:precedes hic:hopNoOutOfPocket .
+hic:hopNoOutOfPocket a hic:WorkflowHop ; rdfs:label "Member does not pay out-of-pocket"@en ; hic:precedes hic:hopPrepareClaim .
+hic:hopPrepareClaim a hic:WorkflowHop ; rdfs:label "Hospital prepares claim document from card and invoices"@en ; hic:precedes hic:hopEnterClaim .
+hic:hopEnterClaim a hic:WorkflowHop ; rdfs:label "Claim form entered in openIMIS (manual or EMR/FHIR)"@en ; hic:precedes hic:hopFacilityVerification .
+hic:hopFacilityVerification a hic:WorkflowHop ; rdfs:label "Manual verification and submission"@en ; hic:precedes hic:hopSystemVerification .
+hic:hopSystemVerification a hic:WorkflowHop ; rdfs:label "System verification by openIMIS (validate_claim)"@en ; hic:precedes hic:hopCrossClaimRules .
+hic:hopCrossClaimRules a hic:WorkflowHop ; rdfs:label "Identity resolution and cross-claim rules"@en ; hic:isProposed true ; hic:precedes hic:hopCompleteness .
+hic:hopCompleteness a hic:AdjudicationStep ; rdfs:label "Check completeness of the claim including attachments"@en ; hic:precedes hic:hopBenefitVerification .
+hic:hopBenefitVerification a hic:AdjudicationStep ; rdfs:label "Verification of claims as per benefit packages"@en ; hic:precedes hic:hopManualReview .
+hic:hopManualReview a hic:AdjudicationStep ; rdfs:label "Manual review of claims using openIMIS (today: random sample; proposed: ranked explained queue)"@en ; hic:precedes hic:hopReviewerDecision .
+hic:hopReviewerDecision a hic:AdjudicationStep ; rdfs:label "Reviewer decision and feedback to the rule base"@en ; hic:isProposed true ; hic:precedes hic:hopAccounts .
+hic:hopAccounts a hic:AdjudicationStep ; rdfs:label "Account section recommends settlement"@en ; hic:precedes hic:hopPayment .
+hic:hopPayment a hic:AdjudicationStep ; rdfs:label "Approved by the Executive Director; online payment"@en .
+
+hic:checkPolicyValidity a hic:ReviewerCheck ; rdfs:label "Policy validity"@en .
+hic:checkWaitingPeriods a hic:ReviewerCheck ; rdfs:label "Coverage and waiting periods"@en .
+hic:checkPreExisting a hic:ReviewerCheck ; rdfs:label "Pre-existing disease / non-disclosure"@en .
+hic:checkSubLimits a hic:ReviewerCheck ; rdfs:label "Sub-limits and room-rent caps"@en .
+hic:checkNetwork a hic:ReviewerCheck ; rdfs:label "Network (empanelment) status"@en .
+hic:checkPreAuth a hic:ReviewerCheck ; rdfs:label "Pre-authorisation"@en .
+hic:checkMedicalNecessity a hic:ReviewerCheck ; rdfs:label "Medical necessity"@en .
+hic:checkDiagnosisTreatmentConsistency a hic:ReviewerCheck ; rdfs:label "Diagnosis–treatment consistency"@en ;
+    skos:note "Our STG rule; openIMIS has no diagnosis check (reason 8 disabled)." .
+hic:checkBillLineItems a hic:ReviewerCheck ; rdfs:label "Bill line-items (non-payables, arithmetic)"@en .
+hic:checkDocumentation a hic:ReviewerCheck ; rdfs:label "Documentation (discharge summary, prescriptions, prescriber NMC number)"@en ;
+    skos:note "HIB's most frequent rejection causes: missing NMC number, tests without prescription, medicines differing from prescription." .
+hic:checkIdentity a hic:ReviewerCheck ; rdfs:label "KYC / beneficiary identity"@en .
+hic:checkTimelines a hic:ReviewerCheck ; rdfs:label "Intimation and submission timelines"@en .
+hic:checkCoPayPackageRate a hic:ReviewerCheck ; rdfs:label "Co-pay / deductible / package rate"@en .
+
+###############################################################################
+#  7. FRAUD KNOWLEDGE: types, red flags, detection methods, rules, flags
+###############################################################################
+
+hic:FraudType a owl:Class ; rdfs:label "Fraud type"@en ;
+    skos:definition "A recognised pattern of improper claiming (World Bank SHI typology; NHCAA)."@en .
+hic:RedFlag a owl:Class ; rdfs:label "Red flag"@en ;
+    skos:definition "An observable signal in claim data or documents that raises suspicion of a fraud type; a starting point, not a conclusion."@en .
+hic:DetectionMethod a owl:Class ; rdfs:label "Detection method"@en ; skos:definition "A way of catching a fraud type: rule engine, analytics, biometrics, field investigation, document forensics, record cross-matching, cross-payer data sharing."@en .
+hic:DetectionRule a owl:Class ; rdfs:label "Detection rule"@en ;
+    skos:definition "A production rule (IF–THEN–BECAUSE) that tests a claim, usually against another claim of the same resolved identity, and raises a weighted, explained flag."@en .
+hic:DetectionFlag a owl:Class ; rdfs:label "Detection flag"@en ;
+    skos:definition "The result of a rule firing on a claim: rule, weight, matched claim, human-readable explanation. Flags route a claim to review; they never reject it."@en .
+hic:ReviewDecision a owl:Class ; rdfs:label "Review decision"@en ; skos:definition "The reviewer's verdict on a flagged claim: confirm (reject, reason 6), clear (false positive, pay), release (pay, keep the note)."@en .
+hic:decisionConfirm a hic:ReviewDecision ; rdfs:label "Confirm (reject with reason 6)"@en .
+hic:decisionClear a hic:ReviewDecision ; rdfs:label "Clear (false positive; pay)"@en .
+hic:decisionRelease a hic:ReviewDecision ; rdfs:label "Release (pay; keep note)"@en .
+
+hic:detects       a owl:ObjectProperty ; rdfs:domain hic:DetectionRule ; rdfs:range hic:FraudType ; rdfs:label "detects"@en .
+hic:usesRedFlag   a owl:ObjectProperty ; rdfs:domain hic:DetectionRule ; rdfs:range hic:RedFlag ; rdfs:label "uses red flag"@en .
+hic:indicatedBy   a owl:ObjectProperty ; rdfs:domain hic:FraudType ; rdfs:range hic:RedFlag ; rdfs:label "indicated by"@en .
+hic:detectedBy    a owl:ObjectProperty ; rdfs:domain hic:FraudType ; rdfs:range hic:DetectionMethod ; rdfs:label "detected by"@en .
+hic:implementsMethod a owl:ObjectProperty ; rdfs:domain hic:DetectionRule ; rdfs:range hic:DetectionMethod ; rdfs:label "implements method"@en .
+hic:raisesFlag    a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:DetectionFlag ; rdfs:label "raises flag"@en .
+hic:firedBy       a owl:ObjectProperty ; rdfs:domain hic:DetectionFlag ; rdfs:range hic:DetectionRule ; rdfs:label "fired by"@en .
+hic:matchedWith   a owl:ObjectProperty , owl:SymmetricProperty ; rdfs:domain hic:Claim ; rdfs:range hic:Claim ; rdfs:label "matched with"@en .
+hic:matchedClaim  a owl:ObjectProperty ; rdfs:domain hic:DetectionFlag ; rdfs:range hic:Claim ; rdfs:label "matched claim"@en .
+hic:reviewedBy    a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:Reviewer ; rdfs:label "reviewed by"@en .
+hic:hasDecision   a owl:ObjectProperty ; rdfs:domain hic:Claim ; rdfs:range hic:ReviewDecision ; rdfs:label "has decision"@en .
+hic:ruleId        a owl:DatatypeProperty ; rdfs:domain hic:DetectionRule ; rdfs:range xsd:string ; rdfs:label "rule id"@en .
+hic:weight        a owl:DatatypeProperty ; rdfs:domain hic:DetectionRule ; rdfs:range xsd:string ; rdfs:label "weight (high / medium / low)"@en .
+hic:condition     a owl:DatatypeProperty ; rdfs:domain hic:DetectionRule ; rdfs:range xsd:string ; rdfs:label "IF condition"@en .
+hic:because       a owl:DatatypeProperty ; rdfs:domain hic:DetectionRule ; rdfs:range xsd:string ; rdfs:label "BECAUSE (rationale)"@en .
+hic:explanation   a owl:DatatypeProperty ; rdfs:domain hic:DetectionFlag ; rdfs:range xsd:string ; rdfs:label "explanation shown to the reviewer"@en .
+hic:suspicionScore a owl:DatatypeProperty ; rdfs:domain hic:Claim ; rdfs:range xsd:integer ; rdfs:label "suspicion score (sum of flag weights)"@en .
+
+# --- fraud types (report §2.1 typology + our two target types) ---
+hic:ftDuplicateClaim a hic:FraudType ; rdfs:label "Duplicate claim (same service billed twice)"@en ; hic:detectedBy hic:dmRuleEngine ; hic:indicatedBy hic:rfSameServiceSameDay .
+hic:ftCrossSchemeDoubleClaim a hic:FraudType ; rdfs:label "Cross-scheme double claiming (same episode billed to HIB and SSF)"@en ; hic:detectedBy hic:dmRuleEngine , hic:dmDataSharing ; hic:indicatedBy hic:rfSamePersonTwoPayers ;
+    skos:note "The World Bank / GI Council 'multiple claims across insurers' type; invisible to either scheme without a shared identifier." .
+hic:ftUnbundling a hic:FraudType ; rdfs:label "Unbundling (one episode split into several claims)"@en ; hic:indicatedBy hic:rfSameEpisodeSplit ; hic:detectedBy hic:dmRuleEngine .
+hic:ftUpcoding a hic:FraudType ; rdfs:label "Upcoding (costlier procedure billed than performed)"@en ; hic:indicatedBy hic:rfDiagnosisTreatmentMismatch ; hic:detectedBy hic:dmCodingReview .
+hic:ftPhantomHospitalisation a hic:FraudType ; rdfs:label "Ghost / phantom hospitalisation"@en ; hic:indicatedBy hic:rfImpossibleSequence ; hic:detectedBy hic:dmBiometric , hic:dmFieldInvestigation .
+hic:ftForgedDocuments a hic:FraudType ; rdfs:label "Fake or forged bills and documents"@en ; hic:detectedBy hic:dmDocumentForensics .
+hic:ftInflatedBillsExtendedStay a hic:FraudType ; rdfs:label "Inflated bills / extended stay"@en ; hic:detectedBy hic:dmPeerBenchmarking .
+hic:ftUnnecessaryServices a hic:FraudType ; rdfs:label "Unnecessary hospitalisation or tests"@en ; hic:detectedBy hic:dmMedicalAudit .
+hic:ftImpersonation a hic:FraudType ; rdfs:label "Impersonation / identity fraud (card sharing)"@en ; hic:detectedBy hic:dmBiometric .
+hic:ftNonDisclosure a hic:FraudType ; rdfs:label "Non-disclosure of pre-existing disease"@en .
+hic:ftCollusionKickbacks a hic:FraudType ; rdfs:label "Hospital–patient collusion / kickbacks"@en ; hic:detectedBy hic:dmFieldInvestigation .
+hic:ftClaimsForDeceased a hic:FraudType ; rdfs:label "Claims for the deceased"@en ; hic:detectedBy hic:dmDeathRecordCrossMatch .
+hic:ftImpossibleClinicalSequence a hic:FraudType ; rdfs:label "Impossible clinical sequence (two admissions at once; surgery after discharge)"@en ; hic:indicatedBy hic:rfImpossibleSequence ; hic:detectedBy hic:dmRuleEngine .
+hic:ftResubmissionGaming a hic:FraudType ; rdfs:label "Resubmission gaming (rejected claim re-entered with a cosmetic change)"@en ; hic:indicatedBy hic:rfRejectedThenReentered ; hic:detectedBy hic:dmRuleEngine .
+hic:ftDutyHourBilling a hic:FraudType ; rdfs:label "Duty-hour public services billed as private"@en ; hic:detectedBy hic:dmInternalAudit .
+hic:ftStagedRescue a hic:FraudType ; rdfs:label "Staged rescue / evacuation (one flight billed to many insurers)"@en ; hic:detectedBy hic:dmFieldInvestigation .
+
+# --- red flags ---
+hic:rfSameServiceSameDay a hic:RedFlag ; rdfs:label "Same person, same service, same day, different claim code"@en .
+hic:rfSameEpisodeSplit a hic:RedFlag ; rdfs:label "Same person, facility and visit date under two claims"@en .
+hic:rfSamePersonTwoPayers a hic:RedFlag ; rdfs:label "Same resolved identity, same diagnosis/service, overlapping dates, different scheme"@en .
+hic:rfImpossibleSequence a hic:RedFlag ; rdfs:label "Overlapping inpatient stays at different facilities"@en .
+hic:rfRejectedThenReentered a hic:RedFlag ; rdfs:label "Rejected claim re-entered within days with changed codes"@en .
+hic:rfDiagnosisTreatmentMismatch a hic:RedFlag ; rdfs:label "Services or length of stay outside the treatment protocol for the diagnosis"@en .
+hic:rfMissingNmcNumber a hic:RedFlag ; rdfs:label "Prescription without an NMC registration number"@en .
+hic:rfSameProviderManyFacilities a hic:RedFlag ; rdfs:label "One NMC number billing across many facilities and dates"@en .
+hic:rfServiceAfterDeath a hic:RedFlag ; rdfs:label "Service date after recorded death"@en .
+
+# --- detection methods (report §2.5) ---
+hic:dmRuleEngine a hic:DetectionMethod ; rdfs:label "Rule engine / data-consistency rules"@en .
+hic:dmAnalytics a hic:DetectionMethod ; rdfs:label "Analytics / AI (peer comparison, ML)"@en .
+hic:dmPeerBenchmarking a hic:DetectionMethod ; rdfs:label "Peer benchmarking"@en .
+hic:dmCodingReview a hic:DetectionMethod ; rdfs:label "Coding review"@en .
+hic:dmMedicalAudit a hic:DetectionMethod ; rdfs:label "Medical-necessity audit"@en .
+hic:dmBiometric a hic:DetectionMethod ; rdfs:label "Biometric / identity verification"@en .
+hic:dmFieldInvestigation a hic:DetectionMethod ; rdfs:label "Field investigation / hospital audit"@en .
+hic:dmDocumentForensics a hic:DetectionMethod ; rdfs:label "Document forensics"@en .
+hic:dmDeathRecordCrossMatch a hic:DetectionMethod ; rdfs:label "Death-record cross-match"@en .
+hic:dmDataSharing a hic:DetectionMethod ; rdfs:label "Cross-payer data sharing"@en .
+hic:dmInternalAudit a hic:DetectionMethod ; rdfs:label "Internal audit vs duty rosters"@en .
+
+# --- our rules (rule catalog R1–R5 + STG), with provenance ---
+rule:R1 a hic:DetectionRule ; hic:ruleId "R1" ; rdfs:label "Within-scheme exact duplicate"@en ; hic:weight "high" ;
+    hic:condition "same identity ∧ same scheme ∧ same date_from ∧ shared billable item ∧ different claim" ;
+    hic:because "one service cannot legitimately be billed twice for one person on one day" ;
+    hic:detects hic:ftDuplicateClaim ; hic:usesRedFlag hic:rfSameServiceSameDay ; hic:implementsMethod hic:dmRuleEngine ;
+    prov:wasDerivedFrom "openIMIS reason 6 (disabled); WEEK2_rule_catalog R1" .
+rule:R2 a hic:DetectionRule ; hic:ruleId "R2" ; rdfs:label "Same-episode split billing (vault)"@en ; hic:weight "medium" ;
+    hic:condition "same identity ∧ same scheme ∧ same facility ∧ same visit date ∧ different lines" ;
+    hic:because "one patient, one hospital, one day = one episode; split billing bypasses ceilings" ;
+    hic:detects hic:ftUnbundling ; hic:usesRedFlag hic:rfSameEpisodeSplit ; hic:implementsMethod hic:dmRuleEngine ;
+    prov:wasDerivedFrom "SSF claim-vault key (HIB expert interview); WEEK2_rule_catalog R2" .
+rule:R3 a hic:DetectionRule ; hic:ruleId "R3" ; rdfs:label "Cross-scheme duplicate (HIB ↔ SSF)"@en ; hic:weight "high" ;
+    hic:condition "same identity ∧ different scheme ∧ dates overlap within ±2 days ∧ (same diagnosis ∨ shared item)" ;
+    hic:because "the two schemes keep independent ledgers, so one episode can be reimbursed twice" ;
+    hic:detects hic:ftCrossSchemeDoubleClaim ; hic:usesRedFlag hic:rfSamePersonTwoPayers ; hic:implementsMethod hic:dmRuleEngine ;
+    prov:wasDerivedFrom "Week-1 HIB↔SSF silo finding; scale test (±2-day window, v0.3)" .
+rule:R4 a hic:DetectionRule ; hic:ruleId "R4" ; rdfs:label "Impossible overlap (two facilities at once)"@en ; hic:weight "high" ;
+    hic:condition "same identity ∧ both inpatient ∧ different facility ∧ admission periods overlap" ;
+    hic:because "a patient cannot be admitted in two places at once" ;
+    hic:detects hic:ftImpossibleClinicalSequence ; hic:usesRedFlag hic:rfImpossibleSequence ; hic:implementsMethod hic:dmRuleEngine ;
+    prov:wasDerivedFrom "'impossible day' red-flag literature; CAG PM-JAY audit findings" .
+rule:R5 a hic:DetectionRule ; hic:ruleId "R5" ; rdfs:label "Resubmission gaming"@en ; hic:weight "medium" ;
+    hic:condition "same identity ∧ prior claim rejected ∧ same diagnosis ∧ within 7 days ∧ changed lines" ;
+    hic:because "cosmetic re-editing to slip past a prior rejection is a known edit-gaming pattern" ;
+    hic:detects hic:ftResubmissionGaming ; hic:usesRedFlag hic:rfRejectedThenReentered ; hic:implementsMethod hic:dmRuleEngine ;
+    prov:wasDerivedFrom "attack-surface analysis of the openIMIS pipeline; WEEK2_rule_catalog R5" .
+rule:STG a hic:DetectionRule ; hic:ruleId "STG" ; rdfs:label "Off-protocol services for the diagnosis"@en ; hic:weight "medium" ;
+    hic:condition "claim line ∉ TreatmentProtocol(diagnosis).allowsItem ∨ lengthOfStay > maxLengthOfStayDays" ;
+    hic:because "services that the diagnosis does not warrant are the signature of upcoding and unbundling; openIMIS never checks the diagnosis" ;
+    hic:detects hic:ftUpcoding , hic:ftUnnecessaryServices ; hic:usesRedFlag hic:rfDiagnosisTreatmentMismatch ; hic:implementsMethod hic:dmCodingReview ;
+    prov:wasDerivedFrom "HIB expert interview: standard treatment protocol" .

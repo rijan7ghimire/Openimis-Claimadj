@@ -7,6 +7,7 @@ import Review from './pages/Review.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Ontology from './pages/Ontology.jsx';
 import Rules from './pages/Rules.jsx';
+import Providers from './pages/Providers.jsx';
 
 class ErrorBoundary extends React.Component {
   constructor(p) { super(p); this.state = { err: null }; }
@@ -20,7 +21,7 @@ function Shell() {
     <header className="topbar"><div className="inner">
       <div className="brand"><span className="dot" />Claim Journey <span className="mute" style={{ fontWeight: 500, fontSize: '.85rem' }}>· openIMIS HIB / SSF · duplicate &amp; cross-scheme detection</span></div>
       <nav className="nav">
-        <NavLink to="/" end>Journey</NavLink><NavLink to="/queue">Review queue</NavLink><NavLink to="/dashboard">Dashboard</NavLink><NavLink to="/rules">Rules</NavLink><NavLink to="/ontology">Ontology</NavLink>
+        <NavLink to="/" end>Journey</NavLink><NavLink to="/queue">Review queue</NavLink><NavLink to="/dashboard">Dashboard</NavLink><NavLink to="/providers">Providers</NavLink><NavLink to="/rules">Rules</NavLink><NavLink to="/ontology">Ontology</NavLink>
       </nav>
     </div></header>
     {err ? <div className="page"><div className="note red">Backend not reachable ({err}). Start it with <code>npm run dev</code> in <code>mvp/</code>.</div></div>
@@ -31,6 +32,7 @@ function Shell() {
         <Route path="/review/:id" element={<Review />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/rules" element={<Rules />} />
+        <Route path="/providers" element={<Providers />} />
         <Route path="/ontology" element={<Ontology />} />
         <Route path="/standards" element={<Ontology />} />
       </Routes></ErrorBoundary>}

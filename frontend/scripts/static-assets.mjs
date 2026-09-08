@@ -11,5 +11,7 @@ if (process.argv.includes('--post')) {
 } else {
   fs.mkdirSync(path.join(root, 'public', 'data'), { recursive: true });
   fs.copyFileSync(path.join(root, '..', 'backend', 'data', 'claims.json'), path.join(root, 'public', 'data', 'claims.json'));
-  console.log('[static] public/data/claims.json copied');
+  const ev = path.join(root, '..', 'backend', 'data', 'evaluation.json');
+  if (fs.existsSync(ev)) fs.copyFileSync(ev, path.join(root, 'public', 'data', 'evaluation.json'));
+  console.log('[static] public/data/claims.json' + (fs.existsSync(ev) ? ' + evaluation.json' : '') + ' copied');
 }

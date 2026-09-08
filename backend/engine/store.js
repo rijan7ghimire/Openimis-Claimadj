@@ -8,7 +8,7 @@ export const STATUS = { REJECTED: 1, ENTERED: 2, CHECKED: 4, PROCESSED: 8, VALUA
 export const REVIEW = { IDLE: 1, NOT_SELECTED: 2, SELECTED: 4, DELIVERED: 8, BYPASSED: 16 };
 export const STATUS_NAME = { 1: 'Rejected', 2: 'Entered', 4: 'Checked', 8: 'Processed', 16: 'Valuated' };
 export const REVIEW_NAME = { 1: 'Idle', 2: 'Not selected', 4: 'Selected', 8: 'Delivered', 16: 'Bypassed' };
-const FRAUD = new Set(['within_dup', 'same_episode', 'cross_scheme', 'impossible_overlap', 'resubmission', 'stg_upcode']);
+export const FRAUD = new Set(['within_dup', 'same_episode', 'cross_scheme', 'impossible_overlap', 'resubmission', 'stg_upcode', 'phantom_readmission', 'upcode_within_protocol', 'phantom_visit']);
 
 function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -30,6 +30,9 @@ export class Store {
     this.feedback = [];          // reviewer decisions
     this.ruleStats = Object.fromEntries(Object.keys(RULES).map(r => [r, { fired: 0, confirmed: 0, cleared: 0, released: 0 }]));
     this.loadedScenarios = new Set();
+    // effective per-rule weight: starts at the catalog weight, moves with reviewer decisions (bounded 0.5 .. 5)
+    this.ruleWeight = Object.fromEntries(Object.entries(RULES).map(([r, x]) => [r, WEIGHT[x.weight]]));
+    this.weightLog = [];
     const t0 = Date.now();
     for (const c of data.claims) this.process({ ...c, session: false });
     this.datasetMetrics = this.computeDatasetMetrics();
@@ -53,8 +56,8 @@ export class Store {
     if (c.engine1.accepted) {
       c.status = STATUS.CHECKED;
       stamp('Automated edits (openIMIS)', c.engine1.because, 'Checked');
-      c.flags = matchRules(c, hist, this.ref);
-      c.suspicion = suspicionOf(c.flags);
+      c.flags = matchRules(c, hist, this.ref).map(f => ({ ...f, points: this.ruleWeight[f.rule] }));
+      c.suspicion = Math.round(c.flags.reduce((s, f) => s + f.points, 0) * 10) / 10;
       for (const f of c.flags) this.ruleStats[f.rule].fired++;
       if (c.flags.length) {
         c.review_status = REVIEW.SELECTED; c.routed = 'review';
@@ -114,14 +117,20 @@ export class Store {
     const stamp = (hop, detail, status) => c.timeline.push({ hop, detail, status });
     c.review_status = REVIEW.DELIVERED; c.review = { decision, note, reviewer, at: new Date().toISOString() };
     for (const f of c.flags) this.ruleStats[f.rule][decision === 'confirm' ? 'confirmed' : decision === 'clear' ? 'cleared' : 'released']++;
+    // the learning loop: confirmed → the rule's weight goes up, cleared → down (bounded); released leaves it alone
+    const delta = decision === 'confirm' ? 0.5 : decision === 'clear' ? -0.5 : 0;
+    if (delta) for (const r of new Set(c.flags.map(f => f.rule))) {
+      const from = this.ruleWeight[r], to = Math.min(5, Math.max(0.5, Math.round((from + delta) * 10) / 10));
+      this.ruleWeight[r] = to; this.weightLog.push({ at: new Date().toISOString(), rule: r, from, to, decision, claim_id: id, reviewer });
+    }
     this.feedback.push({ claim_id: id, decision, rules: c.flags.map(f => f.rule), truth: c.truth, note });
     if (decision === 'confirm') {
       c.status = STATUS.REJECTED; c.rejection_reason = 6;
       stamp('Review delivered', `${reviewer} CONFIRMED the flag · rejection reason 6 "Item/Service duplicated"${note ? ' · ' + note : ''}`, 'Rejected');
-      stamp('Feedback to the rule base', `decision recorded against ${c.flags.map(f => f.rule).join(', ')} — confirmed (weights up)`);
+      stamp('Feedback to the rule base', `decision recorded against ${[...new Set(c.flags.map(f => f.rule))].map(r => `${r} → ${this.ruleWeight[r]}`).join(', ')} — confirmed (weight up)`);
     } else {
       stamp('Review delivered', `${reviewer} ${decision === 'clear' ? 'CLEARED the flag (false positive)' : 'RELEASED the claim'}${note ? ' · ' + note : ''}`, 'Delivered');
-      stamp('Feedback to the rule base', `decision recorded against ${c.flags.map(f => f.rule).join(', ')} — ${decision === 'clear' ? 'cleared (weights down)' : 'released'}`);
+      stamp('Feedback to the rule base', `decision recorded against ${[...new Set(c.flags.map(f => f.rule))].map(r => `${r} → ${this.ruleWeight[r]}`).join(', ')} — ${decision === 'clear' ? 'cleared (weight down)' : 'released (weight unchanged)'}`);
       this.settle(c);
     }
     return c;
@@ -209,9 +218,35 @@ export class Store {
     };
   }
 
+  /** Facility- and doctor-level view: where the flags concentrate. */
+  providers() {
+    const ds = this.claims.filter(c => c.status !== STATUS.REJECTED || c.rejection_reason === 6);
+    const fac = {}, doc = {};
+    for (const c of ds) {
+      const f = fac[c.facility_id] = fac[c.facility_id] || { hf_id: c.facility_id, name: c.hf_name, district: c.district, claims: 0, flagged: 0, suspicion: 0, amount: 0, rules: {}, fraud: 0, days: new Set() };
+      f.claims++; f.amount += this.amount(c); if (c.flags?.length) { f.flagged++; f.suspicion += c.suspicion; }
+      for (const r of new Set((c.flags || []).map(x => x.rule))) f.rules[r] = (f.rules[r] || 0) + 1;
+      if (FRAUD.has(c.truth)) f.fraud++;
+      if (c.nmc_no) {
+        const d = doc[c.nmc_no] = doc[c.nmc_no] || { nmc: c.nmc_no, claims: 0, flagged: 0, facilities: new Set(), perDay: {}, amount: 0 };
+        d.claims++; d.amount += this.amount(c); if (c.flags?.length) d.flagged++; d.facilities.add(c.facility_id);
+        const from = new Date(c.date_from + 'T00:00:00Z'), to = new Date((c.date_to || c.date_from) + 'T00:00:00Z');
+        for (let t = from.getTime(); t <= to.getTime(); t += 86400000) { const k = new Date(t).toISOString().slice(0, 10); d.perDay[k] = (d.perDay[k] || 0) + 1; }
+      }
+    }
+    const facilities = Object.values(fac).filter(f => f.claims >= 8).map(f => ({ ...f, days: undefined, flag_rate: f.flagged / f.claims, rules: Object.entries(f.rules).sort((a, b) => b[1] - a[1]).map(([r, n]) => `${r}×${n}`).join(' ') }))
+      .sort((a, b) => b.flag_rate - a.flag_rate || b.flagged - a.flagged).slice(0, 25);
+    const doctors = Object.values(doc).map(d => ({ nmc: d.nmc, claims: d.claims, flagged: d.flagged, facilities: d.facilities.size, amount: d.amount,
+      max_per_day: Math.max(...Object.values(d.perDay)), busiest_day: Object.entries(d.perDay).sort((a, b) => b[1] - a[1])[0]?.[0] }))
+      .sort((a, b) => b.max_per_day - a.max_per_day || b.flagged - a.flagged).slice(0, 20);
+    const repeatR5 = Object.values(fac).filter(f => (f.rules.R5 || 0) >= 2).map(f => ({ name: f.name, district: f.district, r5: f.rules.R5, claims: f.claims })).sort((a, b) => b.r5 - a.r5).slice(0, 10);
+    const median = (arr) => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : 0; };
+    return { facilities, doctors, repeatR5, baseline: { flag_rate_median: median(Object.values(fac).filter(f => f.claims >= 8).map(f => f.flagged / f.claims)), facilities: Object.keys(fac).length, doctors: Object.keys(doc).length } };
+  }
+
   metrics() {
     const session = this.claims.filter(c => c.session);
-    return { dataset: this.datasetMetrics, rules: RULES, weights: WEIGHT, ruleStats: this.ruleStats, feedback: this.feedback,
+    return { dataset: this.datasetMetrics, rules: RULES, weights: WEIGHT, ruleWeight: this.ruleWeight, weightLog: this.weightLog, ruleStats: this.ruleStats, feedback: this.feedback,
       session: { submitted: session.length, flagged: session.filter(c => c.flags.length).length, reviewed: session.filter(c => c.review).length, paid: session.filter(c => c.paid).length, rejected: session.filter(c => c.status === STATUS.REJECTED).length } };
   }
 }

@@ -53,5 +53,6 @@ export function createApi(store) {
       store.settle(c); return store.detail(c.claim_id);
     },
     metrics: () => store.metrics(),
+    providers: () => store.providers(),
   };
 }

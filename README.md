@@ -41,8 +41,12 @@ Clean visit · within-scheme duplicate (R1) · **cross-scheme HIB→SSF (R3 + R4
 ## Deep links for presentations
 `/?scenario=<id>&step=<0–13>` loads the scenario, submits the claim when needed and jumps to the hop; `&decision=confirm|clear|release` records the reviewer's call. Examples: `/?scenario=cross_scheme&step=7` (our layer), `/?scenario=cross_hard&step=13` (the paid miss), `/?scenario=lapsed&step=6` (existing engine rejects), `/?scenario=legit_split&step=13&decision=clear`.
 
+## Honest evaluation and the validation book
+
+The rules were developed against `backend/data/claims.json`, whose fraud injection is close to the rules written backwards, so its 92 % / 92 % is an upper bound. `backend/data/validation.json` is an **independent, behaviour-based book** (`../synthetic_data/nepal_validation_book.py`, seed 2026): bad facilities and dual-enrolled patients act with lags drawn from distributions, fraud types the rules do not target (phantom re-admission at the same facility, upcoding inside the protocol, ghost visits) and honest confounders (transfers, homonyms, corrected resubmissions, follow-ups). `node backend/evaluate.js` runs the engines unchanged on both and writes `backend/data/evaluation.json` for the dashboard: on the validation book precision ≈ 53 %, recall ≈ 48 %, ranked queue 125 vs random ≈ 14 frauds at the same budget. The dashboard lists the causes and the specific fixes. To regenerate: `python ../synthetic_data/nepal_validation_book.py && cp ../synthetic_data/out_validation/claims.json backend/data/validation.json && node backend/evaluate.js`.
+
 ## Also in the app
-**Review queue** (ranked vs random on the whole book, ground-truth toggle) · **Review** screen for any claim · **Dashboard** (precision/recall per rule and fraud type, triage vs random, the session's learning-loop counters) · **Rules** (`/rules`): every parameter (identity key, weights, R3 window, R5 look-back, budget…), our six rules as if / because cards with live precision on the book, and the openIMIS edits that already exist with their state · **Ontology** (`/ontology`, also linked from the dashboard): what the HIC ontology is in three plain points, one table of which coding standards a Nepali claim actually uses organised by what is on the claim (diagnosis, treatment, medicines, tests, patient, doctor, place, exchange format…) for HIB/SSF and for hospitals, and the gaps it closes.
+**Review queue** (ranked vs random on the whole book, ground-truth toggle) · **Providers** (`/providers`): facilities by flag rate, doctors by busiest day, repeat R5 offenders — the view a provider rule R6 would use · **Review** screen for any claim · **Dashboard** (precision/recall per rule and fraud type, triage vs random, the session's learning-loop counters) · **Rules** (`/rules`): every parameter (identity key, weights, R3 window, R5 look-back, budget…), our six rules as if / because cards with live precision on the book, and the openIMIS edits that already exist with their state · **Ontology** (`/ontology`, also linked from the dashboard): what the HIC ontology is in three plain points, one table of which coding standards a Nepali claim actually uses organised by what is on the claim (diagnosis, treatment, medicines, tests, patient, doctor, place, exchange format…) for HIB/SSF and for hospitals, and the gaps it closes.
 
 ## Slides
 
@@ -61,21 +65,22 @@ mvp/
 │  ├─ engine/store.js           in-memory claim book, identity index, queue, review, settle, metrics, timeline
 │  ├─ scenarios.js              the ten guided journeys
 │  ├─ selftest.js               replays the scenarios, asserts the rules (priors must be clean)
+│  ├─ evaluate.js               honest evaluation: training book vs independent validation book → data/evaluation.json
 │  └─ data/claims.json          Nepal synthetic book (from ../synthetic_data)
 ├─ .github/workflows/pages.yml GitHub Pages deploy (self-test, static build, publish)
 └─ frontend/src/
    ├─ api.js                   one `api` object, two transports: HTTP (local) or in-browser engine (VITE_STATIC)
    ├─ pages/Journey.jsx         the 14-hop walkthrough (journey map · eyebrow + title · one card · Next)
    ├─ components/JourneyMap.jsx  the owner-swimlane map (pure SVG; rows × hops, path, skips, click-to-jump)
-   ├─ pages/Queue.jsx · Review.jsx · Dashboard.jsx · Rules.jsx · Ontology.jsx
+   ├─ pages/Queue.jsx · Review.jsx · Dashboard.jsx · Rules.jsx · Ontology.jsx · Providers.jsx
    └─ components/               EngineViews (animated checklists), QueueTable, ReviewPanel, ui
 ```
 
 ### API
-`GET /api/reference` · `GET /api/persons?q=` · `GET /api/persons/:id/history` · `GET /api/scenarios` · `POST /api/scenarios/:id/load` · `POST /api/claims/submit` `{person, draft}` · `GET /api/claims/:id` · `GET /api/queue?mode=triage|random` · `POST /api/review/:id` `{decision, note}` · `POST /api/claims/:id/settle` · `GET /api/metrics`
+`GET /api/reference` · `GET /api/persons?q=` · `GET /api/persons/:id/history` · `GET /api/scenarios` · `POST /api/scenarios/:id/load` · `POST /api/claims/submit` `{person, draft}` · `GET /api/claims/:id` · `GET /api/queue?mode=triage|random` · `POST /api/review/:id` `{decision, note}` · `POST /api/claims/:id/settle` · `GET /api/metrics` · `GET /api/providers` · `GET /api/evaluation`
 
 ## Fidelity to openIMIS and to the adjudication report
 Status codes Entered 2 → Checked 4 → Processed 8 → Valuated 16 / Rejected 1; review status Idle → Selected → Delivered; the −1…21 rejection reasons with **6 "Item/Service duplicated"** as the reviewer's outcome; Nepali fiscal-year claim codes; HIB's benefit package (NPR 3,500 / 100,000), the 10 % co-payment on diagnostics (Jan 2024), and HIB's documented top rejection causes (missing NMC number, tests without prescriptions, medicines differing from prescription) as the facility and completeness checklists. What is simulated: valuation arithmetic, the batch run and payment hops, reviewer identities.
 
 ## Scope deliberately left out
-Real openIMIS integration (hook documented in `../repos/REPOS.md` §10), authentication, persistence across restarts, Devanagari UI, automatic re-weighting of rules from feedback.
+Real openIMIS integration (hook documented in `../repos/REPOS.md` §10), authentication, persistence across restarts, Devanagari UI. Re-weighting from reviewer decisions is now real but session-only (confirm +0.5, clear −0.5, bounded 0.5–5).

@@ -23,7 +23,7 @@ const STEPS = [
   { key: 'facility_verify', owner: 'facility', short: ['Facility check', 'and submission'], phase: 'submit', title: 'Facility verification and submission', sub: 'The facility checks its own claim against HIB\'s usual rejection causes.', actor: 'Hospital claim admin' },
   { key: 'system_verify', owner: 'openimis', short: ['System', 'verification'], phase: 'submit', title: 'System verification by openIMIS', sub: 'The existing edits — each one looks at this claim alone.', actor: 'openIMIS · validate_claim' },
   { key: 'proposed_layer', owner: 'ours', short: ['Identity and', 'cross-claim', 'rules'], phase: 'submit', title: 'Identity resolution and cross-claim rules', sub: 'The only step that compares this claim with others — across facilities and across schemes.', actor: 'Knowledge-based layer', proposed: true },
-  { key: 'completeness', owner: 'desk', short: ['Completeness', 'check'], phase: 'adjudicate', title: 'Completeness check', sub: 'HIB opens the claim and its attachments.', actor: 'HIB claims desk' },
+  { key: 'completeness', owner: 'desk', short: ['Completeness', 'check'], phase: 'adjudicate', title: 'Completeness check', sub: 'The scheme opens the claim and its attachments.', actor: 'HIB claims desk' },
   { key: 'benefit_verify', owner: 'desk', short: ['Benefit', 'package check'], phase: 'adjudicate', title: 'Verification against the benefit package', sub: 'Covered, priced, within the ceiling?', actor: 'HIB claims desk' },
   { key: 'manual_review', owner: 'mo', short: ['Ranked', 'review queue'], phase: 'adjudicate', title: 'The review queue', sub: 'Today a random 5 % sample; proposed, a ranked queue with reasons.', actor: 'Medical Officers', proposed: true },
   { key: 'decision', owner: 'mo', short: ['Reviewer', 'decision'], phase: 'adjudicate', title: 'Reviewer decision', sub: 'Confirm, clear or release — the decision teaches the rules.', actor: 'Medical Officer', proposed: true },
@@ -122,8 +122,8 @@ export default function Journey() {
       <div className="vs-head">★ Where this study adds value</div>
       <p className="vs-today">openIMIS checks each claim alone, its duplicate rule is switched off, and reviewers get a random 5 % sample. We add three hops:</p>
       <div className="vs-items">
-        <button className={cur.key === 'proposed_layer' ? 'on' : ''} onClick={() => jumpTo(idx('proposed_layer'))}><b>8</b><span><i>Sees across facilities and schemes.</i> 418 of 454 frauds caught at 92 % precision; the existing engine catches 4.</span></button>
-        <button className={cur.key === 'manual_review' ? 'on' : ''} onClick={() => jumpTo(idx('manual_review'))}><b>11</b><span><i>A ranked queue with reasons.</i> Same reviewer budget: 418 frauds reached instead of 17.</span></button>
+        <button className={cur.key === 'proposed_layer' ? 'on' : ''} onClick={() => jumpTo(idx('proposed_layer'))}><b>8</b><span><i>Sees across facilities and schemes.</i> 418 of 454 frauds at 92 % precision on our own book; about half on an independent book (see the dashboard). The existing engine catches 4.</span></button>
+        <button className={cur.key === 'manual_review' ? 'on' : ''} onClick={() => jumpTo(idx('manual_review'))}><b>11</b><span><i>A ranked queue with reasons.</i> Same reviewer budget: 418 frauds reached instead of 14–34; 9× more on the independent book too.</span></button>
         <button className={cur.key === 'decision' ? 'on' : ''} onClick={() => jumpTo(idx('decision'))}><b>12</b><span><i>Every decision teaches the rules.</i> Confirm, clear or release is recorded per rule.</span></button>
       </div>
     </aside>
@@ -172,6 +172,7 @@ export default function Journey() {
               <b>National ID</b><span>{person.national_id ? <span className="mono">{person.national_id}</span> : <span className="gold bold">not recorded</span>}</span></div>
           </div>
           <p className="quiet">Each scheme verifies membership in its own openIMIS. Nothing here tells HIB what SSF knows about this person, or the other way round.</p>
+          {draft.scheme === 'SSF' && <p className="quiet"><b className="teal">How SSF differs.</b> SSF keeps its members in SoSys (its contributor system) and mirrors them to openIMIS over FHIR; the contributor number, not a family card, is the key, and the policy is bound to the fiscal year of the contribution.</p>}
           {priors.length > 0 && <><div className="sep" /><div className="small">{priors.map(p => <div key={p.claim_id}>Earlier claim: <SchemePill s={p.scheme} /> <span className="mono">{p.code}</span> · {p.hf_name} · {p.date_from} · {p.diagnosis} {p.dx_label} · {npr(p.amount)} · <b>{p.status_name}</b>{p.status === 1 && <span className="red"> (reason {p.rejection_reason})</span>}</div>)}</div></>}
           {edit && <><div className="sep" /><input placeholder="search the book: name, National ID, HIB/SSF number…" value={pq} onChange={e => setPq(e.target.value)} />
             <div className="col mt" style={{ maxHeight: 240, overflow: 'auto' }}>{found.map(p => <div key={p.insuree_id} className="scen" onClick={() => { setPerson(p); setPriors([]); setResult(null); setReviewed(null); setDraft(d => ({ ...d, scheme: p.hib_id ? 'HIB' : 'SSF', name_override: undefined })); setEdit(false); }}><div className="t">{p.name}</div><div className="s">{p.sex} · {p.dob} · {p.district}</div></div>)}</div></>}
@@ -201,7 +202,9 @@ export default function Journey() {
         const preview = { resourceType: 'Claim', status: 'active', use: 'claim', patient: { reference: `Patient/${memberNo}`, display: draft.name_override || person.name }, provider: { reference: `Organization/${fac.hf_id}`, display: fac.name }, enterer: { reference: `Practitioner/${draft.nmc_no}` }, billablePeriod: { start: draft.date_from, end: draft.care_type === 'I' ? draft.date_to : draft.date_from }, diagnosis: [{ diagnosisCodeableConcept: { coding: [{ system: 'ICD-10', code: draft.diagnosis, display: proto?.label }] } }], item: draft.lines.map((l, i) => ({ sequence: i + 1, productOrService: { coding: [{ code: l.code }] }, quantity: { value: l.qty }, unitPrice: { value: ref.priceList[l.code] || 0, currency: 'NPR' } })), total: { value: amount, currency: 'NPR' } };
         return <div className="card">
           <div className="kv"><b>Claim no.</b><span>{result ? <span className="mono">{result.code}</span> : <span className="mute">assigned on entry — Bikram-Sambat fiscal year</span>}</span><b>Status</b><span>{result ? <StatusPill status_name="Entered" /> : <span className="mute">Entered (2) after Next</span>}</span><b>Scheme</b><span><SchemePill s={draft.scheme} /></span><b>Travels with it</b><span>member number, facility, doctor's NMC number, diagnosis, lines, attachments</span><b>Does not</b><span>anything about this person's claims in the other scheme, or at other facilities</span></div>
+          {draft.scheme === 'SSF' && <p className="quiet"><b className="teal">How SSF differs.</b> About 85 % of SSF claims arrive through openIMIS; SSF adds a composite claim id (hospital claim id + SSF claim id) and a booking step, and its "vault" key (facility + contributor + visit date) is the origin of our rule R2.</p>}
           <details style={{ marginTop: '.8rem' }}><summary className="small mute" style={{ cursor: 'pointer' }}>The FHIR R4 Claim as an EMR would send it</summary><pre style={{ marginTop: '.5rem' }}>{JSON.stringify(preview, null, 2)}</pre></details>
+          <details style={{ marginTop: '.5rem' }}><summary className="small mute" style={{ cursor: 'pointer' }}>What our layer would add to the FHIR ClaimResponse (proposed)</summary><pre style={{ marginTop: '.5rem' }}>{JSON.stringify({ resourceType: 'ClaimResponse', outcome: 'queued', adjudication: [{ category: { coding: [{ system: 'https://w3id.org/hic-nepal/rule/', code: 'R3' }] }, reason: { text: 'same person, same diagnosis within 2 days, different scheme' }, value: 3 }], extension: [{ url: 'https://w3id.org/hic-nepal/ontology#suspicionScore', valueDecimal: 6 }, { url: 'https://w3id.org/hic-nepal/ontology#reviewStatus', valueCode: 'selected' }] }, null, 2)}</pre></details>
         </div>;
       }
       case 'facility_verify': return <div className="card">
@@ -213,6 +216,7 @@ export default function Journey() {
           <Check ok={draft.lines.every(l => l.code in ref.priceList)} why={draft.lines.some(l => !(l.code in ref.priceList)) ? 'an item is not on the price list — HIB will reject it' : undefined}>All items on the price list</Check>
         </div>
         <p className="quiet">These are HIB's most frequent rejection causes — about one claim in five. Submitted as <span className="mono">{result?.code}</span>, status Entered (2).</p>
+        {draft.scheme === 'SSF' && <p className="quiet"><b className="teal">How SSF differs.</b> SSF's medical team reviews in openIMIS and its accounting system pays; the same rejection vocabulary applies.</p>}
       </div>;
       case 'system_verify': return <div className="card">
         <Engine1Checks engine1={result?.engine1} />
@@ -237,6 +241,15 @@ export default function Journey() {
         {queue && <p className="small center" style={{ marginTop: '-.4rem' }}>{flagged
           ? <>Your claim is <b>#{queue.items.findIndex(x => x.claim_id === result.claim_id) + 1 || '—'}</b> in the ranked queue with suspicion <b>{result.suspicion}</b> — a Medical Officer sees it first, with the reason.</>
           : <>Your claim carries no flag: a 1-in-20 chance in today's random sample, and not shown at all in the ranked queue.</>}</p>}
+        <div className="card soft" style={{ marginBottom: '1rem' }}>
+          <div className="grid grid-4" style={{ gap: '.5rem' }}>
+            <div className="stat"><div className="v">≈ 50,000</div><div className="l">claims a day at HIB (2024)</div></div>
+            <div className="stat"><div className="v">26</div><div className="l">central reviewers (10 in 2020)</div></div>
+            <div className="stat"><div className="v">≈ 1,900</div><div className="l">claims per reviewer per day</div></div>
+            <div className="stat teal"><div className="v">≈ 5 %</div><div className="l">what 26 people can open at 5 min a claim</div></div>
+          </div>
+          <p className="quiet" style={{ marginTop: '.6rem' }}>The random sample is not a policy choice, it is arithmetic: the budget is fixed by headcount. The only lever is <b>which</b> 5 % gets opened. (HIB and GIZ presentations, Apr 2024; reviewer time is an assumption.)</p>
+        </div>
         <QueueTable data={queue} mode={qmode} onMode={setQmode} highlightId={result?.claim_id} onOpen={() => flagged && go(idx('decision'))} refData={ref} />
       </>;
       case 'decision': return <ReviewPanel detail={reviewed || result} refData={ref} onDecided={setReviewed} />;
@@ -252,7 +265,17 @@ export default function Journey() {
             <h2 style={{ margin: 0 }}>{rej ? `Rejected — reason ${c.rejection_reason}${c.rejection_reason === 6 ? ' “Item/Service duplicated”' : ' ' + (ref.rejectionCodes[c.rejection_reason] || '')}` : paid ? `Paid — ${npr(amount - copay)} to ${fac.name}` : flagged ? 'Waiting for the reviewer' : 'Being settled…'}</h2>
             <p className="small" style={{ margin: '.4rem 0 0' }}>{rej && c.rejection_reason === 6 ? 'The Medical Officer confirmed the flag; the facility is notified and the linked claim stays on record as evidence.' : rej ? 'Caught by the existing engine at system verification — before any reviewer was involved.' : paid && flagged ? 'A person looked at it and let it through; the rule that fired is now a little less sure of itself.' : paid ? 'Nothing fired, nobody had to look, the facility is paid.' : 'Open the reviewer step to decide.'}{c?.truth && c.truth !== 'unknown' && <> Ground truth: <Pill tone={c.truth === 'legitimate' ? 'green' : 'red'}>{c.truth}</Pill>{scenario?.hard && <span className="gold"> — the miss we expected: no National ID and a name spelt differently, so the fraud was paid.</span>}</>}</p>
           </div>
-          <div className="card"><Timeline events={c?.timeline || []} /></div>
+          <div className="card">
+            <div className="grid grid-2">
+              <div className="card soft"><div className="eyebrow">Today · openIMIS as it runs</div>
+                <div className="bold navy" style={{ fontSize: '1.05rem', marginTop: '.2rem' }}>{rej && c.rejection_reason !== 6 ? `Rejected — reason ${c.rejection_reason}` : 'Paid'}</div>
+                <p className="small" style={{ margin: '.3rem 0 0' }}>{rej && c.rejection_reason !== 6 ? 'The existing edit caught it; our layer was never needed.' : flagged ? `The edits pass it, a Medical Officer sees it only with a 1-in-20 chance in the random sample, and the money goes out after the batch run. ${c?.truth && c.truth !== 'legitimate' ? 'This fraud would have been paid.' : 'This honest claim is paid, as it should be.'}` : 'Nothing to catch; paid.'}</p></div>
+              <div className="card teal"><div className="eyebrow" style={{ color: 'var(--teal-2)' }}>With the knowledge layer</div>
+                <div className="bold navy" style={{ fontSize: '1.05rem', marginTop: '.2rem' }}>{rej && c.rejection_reason === 6 ? 'Rejected — reason 6, with the linked claim as evidence' : paid && flagged ? 'Paid after a person cleared it' : paid ? 'Paid, nobody had to look' : flagged ? 'Held for a Medical Officer' : rej ? `Rejected — reason ${c.rejection_reason} (existing engine)` : 'Being settled'}</div>
+                <p className="small" style={{ margin: '.3rem 0 0' }}>{flagged ? `Flagged at hop 8 (${c.rules.join(', ')}, suspicion ${c.suspicion}), ranked for review before settlement, decided by a person, and the decision recorded against the rules.` : scenario?.hard ? 'Nothing fired: no National ID and a differently spelt name — the miss we expected, paid in both columns.' : 'No rule fired; the layer added nothing to a reviewer\'s day.'}</p></div>
+            </div>
+            <div className="sep" /><Timeline events={c?.timeline || []} />
+          </div>
           <div className="row wrap" style={{ justifyContent: 'center' }}><button className="btn primary" onClick={() => loadScenario(scenario?.id || 'cross_scheme')}>Replay</button><Link className="btn" to="/queue">Review queue</Link><Link className="btn" to="/dashboard">Dashboard</Link></div>
         </>;
       }

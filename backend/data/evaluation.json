@@ -1,0 +1,291 @@
+{
+ "generated_at": "2026-09-08T16:53:19.205Z",
+ "coupling": "The same team wrote the rules and the training generator, whose fraud injection is close to the rules written backwards (same date, shared service, ±2 days). Numbers on the training book therefore measure how well the rules hit their own targets. The validation book was generated from simulated behaviour with lags drawn from distributions, fraud concentrated in a few facilities and dual-enrolled patients, fraud types the rules do not target, and honest confounders — and the engines were run on it unchanged.",
+ "books": [
+  {
+   "name": "training book",
+   "note": "the book the rules were developed and tuned on (nepal_synthetic_claims.py, seed 42)",
+   "claims": 9786,
+   "persons": 8037,
+   "frauds": 454,
+   "fraud_rate": 0.04639280604945841,
+   "flagged": 455,
+   "tp": 418,
+   "fp": 37,
+   "fn": 36,
+   "precision": 0.9186813186813186,
+   "recall": 0.920704845814978,
+   "byType": {
+    "same_episode": {
+     "planted": 83,
+     "caught": 83
+    },
+    "within_dup": {
+     "planted": 124,
+     "caught": 124
+    },
+    "resubmission": {
+     "planted": 49,
+     "caught": 49
+    },
+    "impossible_overlap": {
+     "planted": 33,
+     "caught": 31
+    },
+    "cross_scheme": {
+     "planted": 70,
+     "caught": 68
+    },
+    "stg_upcode": {
+     "planted": 66,
+     "caught": 63
+    },
+    "cross_scheme (hard: no NID + name variant)": {
+     "planted": 29,
+     "caught": 0
+    }
+   },
+   "byRule": {
+    "R2": {
+     "fired": 108,
+     "fraud": 85
+    },
+    "R1": {
+     "fired": 141,
+     "fraud": 131
+    },
+    "R5": {
+     "fired": 50,
+     "fraud": 49
+    },
+    "R4": {
+     "fired": 36,
+     "fraud": 36
+    },
+    "R3": {
+     "fired": 72,
+     "fraud": 69
+    },
+    "STG": {
+     "fired": 71,
+     "fraud": 71
+    }
+   },
+   "existing": {
+    "rejected": 1011,
+    "rejected_fraud": 4
+   },
+   "budget": 489,
+   "ranked_frauds": 418,
+   "random": {
+    "mean": 23,
+    "min": 14,
+    "max": 34,
+    "draws": 30
+   },
+   "fp_causes": [
+    {
+     "cause": "LEGIT split: lab line of the same visit entered as a second claim",
+     "n": 22,
+     "rules": "R2×22"
+    },
+    {
+     "cause": "legitimate look-alike",
+     "n": 11,
+     "rules": "R2×1 R1×9 R3×1"
+    },
+    {
+     "cause": "legitimate repeat treatment (same service, different date)",
+     "n": 4,
+     "rules": "R5×1 R3×2 R1×1"
+    }
+   ],
+   "miss_causes": [
+    {
+     "cause": "cross_scheme — HARD: no NID + name spelling variant -> expected miss",
+     "n": 29
+    },
+    {
+     "cause": "stg_upcode — high-cost service that the diagnosis does not warrant",
+     "n": 3
+    },
+    {
+     "cause": "impossible_overlap — admitted in two hospitals at the same time",
+     "n": 2
+    },
+    {
+     "cause": "cross_scheme — same episode reimbursed by the other scheme",
+     "n": 2
+    }
+   ]
+  },
+  {
+   "name": "validation book",
+   "note": "independent, behaviour-based generator written without the rules' thresholds (nepal_validation_book.py, seed 2026)",
+   "claims": 6825,
+   "persons": 5589,
+   "frauds": 261,
+   "fraud_rate": 0.03824175824175824,
+   "flagged": 237,
+   "tp": 125,
+   "fp": 112,
+   "fn": 136,
+   "precision": 0.5274261603375527,
+   "recall": 0.4789272030651341,
+   "byType": {
+    "same_episode": {
+     "planted": 20,
+     "caught": 16
+    },
+    "within_dup": {
+     "planted": 38,
+     "caught": 11
+    },
+    "stg_upcode": {
+     "planted": 21,
+     "caught": 21
+    },
+    "cross_scheme": {
+     "planted": 71,
+     "caught": 43
+    },
+    "phantom_readmission": {
+     "planted": 31,
+     "caught": 12
+    },
+    "resubmission": {
+     "planted": 42,
+     "caught": 21
+    },
+    "upcode_within_protocol": {
+     "planted": 15,
+     "caught": 0
+    },
+    "phantom_visit": {
+     "planted": 23,
+     "caught": 1
+    }
+   },
+   "byRule": {
+    "R2": {
+     "fired": 16,
+     "fraud": 16
+    },
+    "STG": {
+     "fired": 45,
+     "fraud": 27
+    },
+    "R3": {
+     "fired": 58,
+     "fraud": 43
+    },
+    "R1": {
+     "fired": 32,
+     "fraud": 25
+    },
+    "R5": {
+     "fired": 69,
+     "fraud": 20
+    },
+    "R4": {
+     "fired": 48,
+     "fraud": 8
+    }
+   },
+   "existing": {
+    "rejected": 577,
+    "rejected_fraud": 0
+   },
+   "budget": 341,
+   "ranked_frauds": 125,
+   "random": {
+    "mean": 13.6,
+    "min": 6,
+    "max": 23,
+    "draws": 30
+   },
+   "fp_causes": [
+    {
+     "cause": "transfer: admitted at the referral hospital on the discharge day",
+     "n": 39,
+     "rules": "R4×39 STG×16 R3×1"
+    },
+    {
+     "cause": "legitimate look-alike",
+     "n": 33,
+     "rules": "R5×28 R1×4 R4×1"
+    },
+    {
+     "cause": "honest correction N d after rejection (off-list line removed)",
+     "n": 17,
+     "rules": "R5×15 R1×2"
+    },
+    {
+     "cause": "homonym: a different person with the same name, DOB and sex (no Nation",
+     "n": 14,
+     "rules": "R3×14"
+    },
+    {
+     "cause": "legitimate repeat treatment (same service, different date)",
+     "n": 5,
+     "rules": "R5×5"
+    },
+    {
+     "cause": "follow-up visit with a lab test",
+     "n": 4,
+     "rules": "R1×1 STG×2 R5×1"
+    }
+   ],
+   "miss_causes": [
+    {
+     "cause": "within_dup — facility re-bills the same visit N d(s) later",
+     "n": 27
+    },
+    {
+     "cause": "phantom_visit — ghost visit: the person never attended",
+     "n": 22
+    },
+    {
+     "cause": "resubmission — re-entered N d after rejection with a swapped code",
+     "n": 21
+    },
+    {
+     "cause": "phantom_readmission — second inpatient stay overlapping the first at the same facility",
+     "n": 19
+    },
+    {
+     "cause": "upcode_within_protocol — cheaper item swapped for WARD-DAY (still inside the protocol)",
+     "n": 11
+    },
+    {
+     "cause": "cross_scheme — same episode claimed from SSF N d(s) later",
+     "n": 10
+    },
+    {
+     "cause": "cross_scheme — same episode claimed from SSF N d(s) later · no National ID",
+     "n": 7
+    },
+    {
+     "cause": "cross_scheme — same episode claimed from SSF N d(s) later · name spelt differently in",
+     "n": 6
+    },
+    {
+     "cause": "upcode_within_protocol — cheaper item swapped for ICU-DAY (still inside the protocol)",
+     "n": 4
+    },
+    {
+     "cause": "cross_scheme — same episode claimed from HIB N d(s) later",
+     "n": 4
+    },
+    {
+     "cause": "same_episode — one visit split into two claims (lag N d)",
+     "n": 4
+    },
+    {
+     "cause": "cross_scheme — same episode claimed from HIB N d(s) later · no National ID",
+     "n": 1
+    }
+   ]
+  }
+ ]
+}

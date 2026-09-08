@@ -27,6 +27,8 @@ app.get('/api/queue', wrap((req) => api.queue(req.query.mode, req.query.limit)))
 app.post('/api/review/:id', wrap((req) => { const { decision, note, reviewer } = req.body; return api.review(req.params.id, decision, note, reviewer); }));
 app.post('/api/claims/:id/settle', wrap((req) => api.settle(req.params.id)));
 app.get('/api/metrics', wrap(() => api.metrics()));
+app.get('/api/providers', wrap(() => api.providers()));
+app.get('/api/evaluation', (req, res) => { const p = path.join(__dirname, 'data', 'evaluation.json'); fs.existsSync(p) ? res.sendFile(p) : res.status(404).json({ error: 'run node evaluate.js first' }); });
 
 // serve the built frontend if present (npm run build)
 const dist = path.join(__dirname, '..', 'frontend', 'dist');
