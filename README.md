@@ -44,6 +44,10 @@ Clean visit · within-scheme duplicate (R1) · **cross-scheme HIB→SSF (R3 + R4
 ## Also in the app
 **Review queue** (ranked vs random on the whole book, ground-truth toggle) · **Review** screen for any claim · **Dashboard** (precision/recall per rule and fraud type, triage vs random, the session's learning-loop counters) · **Rules** (`/rules`): every parameter (identity key, weights, R3 window, R5 look-back, budget…), our six rules as if / because cards with live precision on the book, and the openIMIS edits that already exist with their state · **Ontology** (`/ontology`, also linked from the dashboard): what the HIC ontology is in three plain points, one table of which coding standards a Nepali claim actually uses organised by what is on the claim (diagnosis, treatment, medicines, tests, patient, doctor, place, exchange format…) for HIB/SSF and for hospitals, and the gaps it closes.
 
+## Slides
+
+`docs/WEEK5_claim_journey.pptx` — the Week 5 deck built from this app (27 slides: the claim journey, ontology and knowledge base, rules and failed cases, proposed solution). `docs/ontology_core.png` is the HIC ontology diagram shown on the Ontology page.
+
 ## Structure
 
 ```
