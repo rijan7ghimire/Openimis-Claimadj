@@ -1,0 +1,15 @@
+{
+  "name": "claim-journey-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Claim Journey — from the patient's hand to the final reviewer (openIMIS HIB/SSF duplicate & cross-scheme detection MVP)",
+  "scripts": {
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "dev": "concurrently -n api,web -c teal,blue \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix backend run start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
