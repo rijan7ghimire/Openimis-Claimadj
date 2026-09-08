@@ -5,7 +5,7 @@ import { api, pct } from '../api.js';
 import { Stat, RuleTag } from '../components/ui.jsx';
 
 const NAVY = '#1f3864', TEAL = '#0f9d8f', GOLD = '#e8a13a', MUTE = '#9ca3af', RED = '#d1495b';
-const WHY_B = { within_dup: 're-billed days later, not the same day', same_episode: 'split across two days as well', cross_scheme: 'lags up to 10 days, 30 % name variants', resubmission: 'lags up to 14 days (R5 looks back 7)', phantom_readmission: 'same facility — R4 needs two facilities', upcode_within_protocol: 'the dearer item is still allowed — STG cannot see it', phantom_visit: 'nothing on the claim distinguishes it', stg_upcode: 'off-protocol item or over-long stay', impossible_overlap: 'training book only' };
+const WHY_B = { within_dup: 're-billed 0–14 days later (R1 near-duplicate variant now covers identical bills)', same_episode: 'split across two days as well', cross_scheme: 'lags up to 10 days, 30 % name variants; R3 keeps its ±2-day window', resubmission: 'lags up to 14 days; R5 now looks back 14 and needs an introduced code', phantom_readmission: 'same facility — now the medium R4 variant', upcode_within_protocol: 'the dearer item is still allowed — STG cannot see it', phantom_visit: 'nothing on the claim distinguishes it', stg_upcode: 'off-protocol item or over-long stay', impossible_overlap: 'training book only; overlaps that start on the discharge day now read as transfers' };
 
 export default function Dashboard() {
   const [m, setM] = useState(null);
@@ -19,11 +19,11 @@ export default function Dashboard() {
   const types = Object.entries(d.byType).sort((a, b) => b[1].planted - a[1].planted);
   const A = ev?.books?.[0], B = ev?.books?.[1];
   return <div className="page">
-    <div className="actor">Evaluation · the whole claim book</div>
+    <div className="actor">Evaluation · the whole claim book · <span className="std-tag partial">synthetic data — no real claims</span></div>
     <h1>Dashboard</h1>
     <p className="mute">The Nepal synthetic book loaded in this app ({d.claims.toLocaleString()} claims, {d.persons.toLocaleString()} people, {d.dual.toLocaleString()} enrolled in both schemes, {pct(d.with_nid / d.persons)} with a National ID). Ground truth is known, so the run scores itself — <b>on the book the rules were tuned on</b>. The honest number is further down.</p>
     <div className="grid grid-4 mt">
-      <Stat v={d.frauds.toLocaleString()} l="fraudulent claims planted" sub={`${pct(d.fraud_rate, 1)} of the book (HIB estimate ≈ 5.5 %)`} />
+      <Stat v={d.frauds.toLocaleString()} l="fraudulent claims planted (synthetic)" sub={`of ${d.claims.toLocaleString()} generated claims · ${pct(d.fraud_rate, 1)} (HIB estimate ≈ 5.5 %)`} />
       <Stat v={d.existing_rejected_fraud} l="caught by the existing engine" tone="red" sub={`it rejected ${d.existing_rejected.toLocaleString()} claims — all legitimate rule violations`} />
       <Stat v={pct(d.precision, 1)} l="precision of our layer" tone="teal" sub={`${d.flagged} flagged · ${d.fp} false positives`} />
       <Stat v={pct(d.recall, 1)} l="recall of our layer" tone="teal" sub={`${d.tp} of ${d.frauds} caught · ${d.fn} missed`} />
@@ -68,7 +68,7 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="card teal mt">
-          <b className="navy">What the drop teaches.</b> <span className="small">On the training book the layer looks near-perfect because the fraud was injected the way the rules look for it. On the independent book precision falls to about {pct(B.precision)} and recall to about {pct(B.recall)}: transfers between hospitals trip R4, homonyms without a National ID trip R3, honest corrections after a rejection trip R5, and four fraud behaviours are simply invisible to claim-pair rules. The ranked queue still beats the random sample by about {(B.ranked_frauds / Math.max(1, B.random.mean)).toFixed(0)}× on B, which is the claim we can defend. The fixes are specific: a transfer exception for R4 (discharge day = admission day), a homonym guard for R3 (require a shared facility or a second identifier), R5 limited to code swaps that keep the same items, a wider R1 window, and the provider profile for what claim pairs cannot see.</span>
+          <b className="navy">What the drop teaches.</b> <span className="small">On the training book the layer looks near-perfect because the fraud was injected the way the rules look for it. On the independent book precision is about {pct(B.precision)} and recall about {pct(B.recall)} — after the revisions the validation book prompted (a transfer exception and a same-facility variant for R4, identity-confidence weighting for R3, an introduced-code test and a 14-day look-back for R5, a 14-day identical-bill variant for R1, and the new R6–R8). What remains is honest: ghost visits and upcoding inside the protocol are invisible to claim rules, cross-scheme claims with long lags or without a National ID are missed on purpose, and the frequency and provider rules trade precision for coverage. The ranked queue beats the random sample by about {(B.ranked_frauds / Math.max(1, B.random.mean)).toFixed(0)}× on B, which is the claim we can defend.</span>
         </div>
       </>}
       {ev && !B && <p className="small mute mt">No validation book yet — run <span className="mono">python synthetic_data/nepal_validation_book.py</span>, copy it to <span className="mono">backend/data/validation.json</span> and <span className="mono">node backend/evaluate.js</span>.</p>}

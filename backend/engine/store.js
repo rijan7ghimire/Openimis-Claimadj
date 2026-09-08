@@ -32,6 +32,9 @@ export class Store {
     this.loadedScenarios = new Set();
     // effective per-rule weight: starts at the catalog weight, moves with reviewer decisions (bounded 0.5 .. 5)
     this.ruleWeight = Object.fromEntries(Object.entries(RULES).map(([r, x]) => [r, WEIGHT[x.weight]]));
+    this.facStats = new Map();   // facility_id -> {claims, flagged} (rolling window of the last 60 claims)
+    this.byDoctor = new Map();   // nmc_no -> [claims]
+    this.medianRate = 0; this._medianAt = 0;
     this.weightLog = [];
     const t0 = Date.now();
     for (const c of data.claims) this.process({ ...c, session: false });
@@ -56,7 +59,10 @@ export class Store {
     if (c.engine1.accepted) {
       c.status = STATUS.CHECKED;
       stamp('Automated edits (openIMIS)', c.engine1.because, 'Checked');
-      c.flags = matchRules(c, hist, this.ref).map(f => ({ ...f, points: this.ruleWeight[f.rule] }));
+      const fs = this.facStats.get(c.facility_id);
+      const ctx = { facility: fs ? { claims: fs.claims, flagged: fs.flagged, medianRate: this.medianRate } : null, doctorClaims: c.nmc_no ? (this.byDoctor.get(c.nmc_no) || []) : [] };
+      // points = the rule's current (learned) weight, scaled when the flag itself carries a lower confidence (e.g. R3 on a composite identity)
+      c.flags = matchRules(c, hist, this.ref, ctx).map(f => ({ ...f, points: f.subsumedBy ? 0 : Math.round(this.ruleWeight[f.rule] * WEIGHT[f.weight] / WEIGHT[RULES[f.rule].weight] * 10) / 10 }));
       c.suspicion = Math.round(c.flags.reduce((s, f) => s + f.points, 0) * 10) / 10;
       for (const f of c.flags) this.ruleStats[f.rule].fired++;
       if (c.flags.length) {
@@ -74,6 +80,16 @@ export class Store {
     if (!this.index.has(id.key)) this.index.set(id.key, []);
     this.index.get(id.key).push({ claim: c, verdict: c.engine1 });
     this.claims.push(c); this.byId.set(c.claim_id, c);
+    // provider context for R6 / R7 (kept small: last 60 claims per facility)
+    const fs = this.facStats.get(c.facility_id) || { claims: 0, flagged: 0, recent: [] };
+    const strong = (c.flags || []).some(f => !f.subsumedBy && !['R6', 'R7'].includes(f.rule));
+    fs.recent.push(strong ? 1 : 0); if (fs.recent.length > 100) fs.recent.shift();
+    fs.claims = fs.recent.length; fs.flagged = fs.recent.reduce((a, b) => a + b, 0); this.facStats.set(c.facility_id, fs);
+    if (this.claims.length - this._medianAt >= 250) {
+      const rates = [...this.facStats.values()].filter(x => x.claims >= 20).map(x => x.flagged / x.claims).sort((a, b) => a - b);
+      this.medianRate = rates.length ? rates[Math.floor(rates.length / 2)] : 0; this._medianAt = this.claims.length;
+    }
+    if (c.nmc_no) { const arr = this.byDoctor.get(c.nmc_no) || []; arr.push(c); if (arr.length > 40) arr.shift(); this.byDoctor.set(c.nmc_no, arr); }
     return c;
   }
 

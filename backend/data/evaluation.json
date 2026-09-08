@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-08T16:53:19.205Z",
+ "generated_at": "2026-09-08T17:16:50.048Z",
  "coupling": "The same team wrote the rules and the training generator, whose fraud injection is close to the rules written backwards (same date, shared service, ±2 days). Numbers on the training book therefore measure how well the rules hit their own targets. The validation book was generated from simulated behaviour with lags drawn from distributions, fraud concentrated in a few facilities and dual-enrolled patients, fraud types the rules do not target, and honest confounders — and the engines were run on it unchanged.",
  "books": [
   {
@@ -9,11 +9,11 @@
    "persons": 8037,
    "frauds": 454,
    "fraud_rate": 0.04639280604945841,
-   "flagged": 455,
+   "flagged": 474,
    "tp": 418,
-   "fp": 37,
+   "fp": 56,
    "fn": 36,
-   "precision": 0.9186813186813186,
+   "precision": 0.8818565400843882,
    "recall": 0.920704845814978,
    "byType": {
     "same_episode": {
@@ -51,16 +51,16 @@
      "fraud": 85
     },
     "R1": {
-     "fired": 141,
+     "fired": 147,
      "fraud": 131
     },
     "R5": {
-     "fired": 50,
+     "fired": 51,
      "fraud": 49
     },
     "R4": {
-     "fired": 36,
-     "fraud": 36
+     "fired": 64,
+     "fraud": 62
     },
     "R3": {
      "fired": 72,
@@ -69,6 +69,14 @@
     "STG": {
      "fired": 71,
      "fraud": 71
+    },
+    "R8": {
+     "fired": 7,
+     "fraud": 3
+    },
+    "R7": {
+     "fired": 7,
+     "fraud": 0
     }
    },
    "existing": {
@@ -85,14 +93,14 @@
    },
    "fp_causes": [
     {
+     "cause": "legitimate look-alike",
+     "n": 30,
+     "rules": "R2×1 R1×15 R8×4 R4×2 R7×7 R3×1 R5×1"
+    },
+    {
      "cause": "LEGIT split: lab line of the same visit entered as a second claim",
      "n": 22,
      "rules": "R2×22"
-    },
-    {
-     "cause": "legitimate look-alike",
-     "n": 11,
-     "rules": "R2×1 R1×9 R3×1"
     },
     {
      "cause": "legitimate repeat treatment (same service, different date)",
@@ -126,20 +134,20 @@
    "persons": 5589,
    "frauds": 261,
    "fraud_rate": 0.03824175824175824,
-   "flagged": 237,
-   "tp": 125,
-   "fp": 112,
-   "fn": 136,
-   "precision": 0.5274261603375527,
-   "recall": 0.4789272030651341,
+   "flagged": 386,
+   "tp": 193,
+   "fp": 193,
+   "fn": 68,
+   "precision": 0.5,
+   "recall": 0.7394636015325671,
    "byType": {
     "same_episode": {
      "planted": 20,
-     "caught": 16
+     "caught": 20
     },
     "within_dup": {
      "planted": 38,
-     "caught": 11
+     "caught": 32
     },
     "stg_upcode": {
      "planted": 21,
@@ -147,29 +155,37 @@
     },
     "cross_scheme": {
      "planted": 71,
-     "caught": 43
+     "caught": 47
     },
     "phantom_readmission": {
      "planted": 31,
-     "caught": 12
+     "caught": 31
     },
     "resubmission": {
      "planted": 42,
-     "caught": 21
+     "caught": 38
     },
     "upcode_within_protocol": {
      "planted": 15,
-     "caught": 0
+     "caught": 2
     },
     "phantom_visit": {
      "planted": 23,
-     "caught": 1
+     "caught": 2
     }
    },
    "byRule": {
     "R2": {
      "fired": 16,
      "fraud": 16
+    },
+    "R4": {
+     "fired": 52,
+     "fraud": 49
+    },
+    "R1": {
+     "fired": 80,
+     "fraud": 49
     },
     "STG": {
      "fired": 45,
@@ -179,17 +195,21 @@
      "fired": 58,
      "fraud": 43
     },
-    "R1": {
-     "fired": 32,
-     "fraud": 25
-    },
     "R5": {
-     "fired": 69,
-     "fraud": 20
+     "fired": 83,
+     "fraud": 39
     },
-    "R4": {
-     "fired": 48,
-     "fraud": 8
+    "R8": {
+     "fired": 23,
+     "fraud": 7
+    },
+    "R7": {
+     "fired": 3,
+     "fraud": 0
+    },
+    "R6": {
+     "fired": 111,
+     "fraud": 33
     }
    },
    "existing": {
@@ -197,7 +217,7 @@
     "rejected_fraud": 0
    },
    "budget": 341,
-   "ranked_frauds": 125,
+   "ranked_frauds": 189,
    "random": {
     "mean": 13.6,
     "min": 6,
@@ -206,19 +226,14 @@
    },
    "fp_causes": [
     {
-     "cause": "transfer: admitted at the referral hospital on the discharge day",
-     "n": 39,
-     "rules": "R4×39 STG×16 R3×1"
-    },
-    {
      "cause": "legitimate look-alike",
-     "n": 33,
-     "rules": "R5×28 R1×4 R4×1"
+     "n": 128,
+     "rules": "R5×33 R1×15 R8×12 R7×3 R4×1 R6×71"
     },
     {
-     "cause": "honest correction N d after rejection (off-list line removed)",
-     "n": 17,
-     "rules": "R5×15 R1×2"
+     "cause": "transfer: admitted at the referral hospital on the discharge day",
+     "n": 24,
+     "rules": "R1×5 STG×16 R5×1 R8×3 R6×3 R4×2 R3×1"
     },
     {
      "cause": "homonym: a different person with the same name, DOB and sex (no Nation",
@@ -226,51 +241,48 @@
      "rules": "R3×14"
     },
     {
-     "cause": "legitimate repeat treatment (same service, different date)",
-     "n": 5,
-     "rules": "R5×5"
+     "cause": "follow-up visit with a lab test",
+     "n": 10,
+     "rules": "R5×2 R1×5 STG×2 R6×2"
     },
     {
-     "cause": "follow-up visit with a lab test",
-     "n": 4,
-     "rules": "R1×1 STG×2 R5×1"
+     "cause": "legitimate repeat treatment (same service, different date)",
+     "n": 10,
+     "rules": "R5×8 R6×2"
+    },
+    {
+     "cause": "honest correction N d after rejection (off-list line removed)",
+     "n": 7,
+     "rules": "R1×6 R8×1"
     }
    ],
    "miss_causes": [
     {
-     "cause": "within_dup — facility re-bills the same visit N d(s) later",
-     "n": 27
-    },
-    {
      "cause": "phantom_visit — ghost visit: the person never attended",
-     "n": 22
-    },
-    {
-     "cause": "resubmission — re-entered N d after rejection with a swapped code",
      "n": 21
     },
     {
-     "cause": "phantom_readmission — second inpatient stay overlapping the first at the same facility",
-     "n": 19
-    },
-    {
      "cause": "upcode_within_protocol — cheaper item swapped for WARD-DAY (still inside the protocol)",
-     "n": 11
-    },
-    {
-     "cause": "cross_scheme — same episode claimed from SSF N d(s) later",
      "n": 10
     },
     {
+     "cause": "cross_scheme — same episode claimed from SSF N d(s) later",
+     "n": 8
+    },
+    {
      "cause": "cross_scheme — same episode claimed from SSF N d(s) later · no National ID",
-     "n": 7
+     "n": 6
     },
     {
      "cause": "cross_scheme — same episode claimed from SSF N d(s) later · name spelt differently in",
      "n": 6
     },
     {
-     "cause": "upcode_within_protocol — cheaper item swapped for ICU-DAY (still inside the protocol)",
+     "cause": "within_dup — facility re-bills the same visit N d(s) later",
+     "n": 6
+    },
+    {
+     "cause": "resubmission — re-entered N d after rejection with a swapped code",
      "n": 4
     },
     {
@@ -278,12 +290,8 @@
      "n": 4
     },
     {
-     "cause": "same_episode — one visit split into two claims (lag N d)",
-     "n": 4
-    },
-    {
-     "cause": "cross_scheme — same episode claimed from HIB N d(s) later · no National ID",
-     "n": 1
+     "cause": "upcode_within_protocol — cheaper item swapped for ICU-DAY (still inside the protocol)",
+     "n": 3
     }
    ]
   }

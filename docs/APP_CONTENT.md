@@ -1,6 +1,6 @@
 # Claim Journey — everything the web app says, in one file
 
-*The content of the Claim Journey web app (React + Node), written out page by page. Numbers are from the synthetic Nepal claim book loaded in the app (seed 42). Long screens are summarised; nothing is invented beyond what the app shows.*
+*The content of the Claim Journey web app (React + Node), written out page by page. **All claims in the app are synthetic**: 9,786 generated claims in the training book (seed 42, 454 with planted fraud) and 6,825 in the independent validation book (seed 2026, 261 with planted fraud) — 16,611 synthetic claims in total, no real patient or claim data anywhere. Long screens are summarised; nothing is invented beyond what the app shows.*
 
 - Live: https://rijan7ghimire.github.io/Openimis-Claimadj/ · Source: https://github.com/rijan7ghimire/Openimis-Claimadj
 - Local: `npm run install:all` then `npm run dev` → http://localhost:5173 (API on :4000). Static build: `VITE_STATIC=true npm run build:static` in `frontend/`.
@@ -64,8 +64,8 @@ Under every step: a **Next** button, ← back, and the keyboard hint (← → ke
 
 Today openIMIS checks each claim alone, its duplicate rule is switched off, and reviewers get a random 5 % sample. We add three hops:
 
-- **8 · Sees across facilities and schemes.** 418 of 454 frauds at 92 % precision on our own book; about half on an independent book (see the dashboard). The existing engine catches 4.
-- **11 · A ranked queue with reasons.** Same reviewer budget: 418 frauds reached instead of 14–34; 9× more on the independent book too.
+- **8 · Sees across facilities and schemes.** Nine rules: 92 % of planted frauds on our own synthetic book (88 % precision), 74 % on an independent synthetic book at 50 % precision. The existing engine catches 4 of 454.
+- **11 · A ranked queue with reasons.** Same reviewer budget: 418 frauds reached instead of 14–34 on our book; 189 instead of about 14 on the independent book.
 - **12 · Every decision teaches the rules.** Confirm, clear or release is recorded per rule.
 
 ---
@@ -131,7 +131,7 @@ Resolve **who** the person is → fetch their **history** across facilities and 
 | What a flag can do | never reject | a flag only ranks the claim for a Medical Officer; the decision stays human |
 | Reviewer decisions | confirm → reason 6 · clear · release | each is recorded against the rules that fired: confirmed → weight up, cleared → weight down |
 
-### 5.3 The six rules
+### 5.3 The nine rules (R1–R5 and STG revised after the validation book; R6–R8 new, from the adjudication report)
 
 | Rule | Name | If | Because | Weight | Detects / red flag | Source | On the book (fired · precision) |
 |---|---|---|---|---|---|---|---|
@@ -140,7 +140,12 @@ Resolve **who** the person is → fetch their **history** across facilities and 
 | R3 | Cross-scheme duplicate (HIB ↔ SSF) | same identity key · a different scheme · dates within ±2 days · same diagnosis or a shared service | HIB and SSF do not see each other; the same care is claimed twice | high +3 | cross-scheme double claim / same person, two payers | rule catalog R3 · independent ledgers | 72 · 96 % |
 | R4 | Impossible overlap (two facilities at once) | two inpatient stays · different facilities · overlapping dates | a patient cannot be admitted in two places at once | high +3 | impossible clinical sequence / impossible day | rule catalog R4 | 36 · 100 % |
 | R5 | Resubmission gaming | an earlier rejected claim · same diagnosis · within 7 days · the codes were changed | the claim is being re-shaped to slip past the edit that rejected it | medium +2 | resubmission gaming / rejected, then re-entered | rule catalog R5 · edit-gaming attack surface | 50 · 98 % |
-| STG | Off-protocol services for the diagnosis | a billed service is not in the treatment protocol for the diagnosis, or the stay is longer than the protocol's maximum | the diagnosis does not warrant the service — possible upcoding or unnecessary care | medium +2 | upcoding · unnecessary services / diagnosis–treatment mismatch | HIB expert interview · openIMIS reason 8 (disabled) | 71 · 100 % |
+| STG | Off-protocol services, over-long stay or unnecessary admission | a billed service outside the protocol; or an inpatient admission for a diagnosis the protocol treats as outpatient; or a stay above the protocol maximum | the diagnosis does not warrant the service, the admission or the stay | medium +2 | upcoding · unnecessary services · inflated bills / diagnosis–treatment mismatch | HIB expert interview · openIMIS reason 8 (disabled) · report: medical necessity | 71 · 100 % |
+| R6 (new) | Provider concentration | the facility's share of strongly flagged claims over its last 100 claims is ≥ 25 % and > 3× the median facility | fraud is a repeated behaviour of a few providers | low +1 | provider concentration / facility flag rate above peers | report: peer benchmarking, PM-JAY provider profiling and de-empanelment | training: not fired; validation: 111 · 30 % |
+| R7 (new) | One doctor, two facilities, same day | the treating doctor's NMC number is on another facility's claim on the same day | one doctor cannot treat in two facilities at once | low +1 | phantom hospitalisation · duty-hour billing / same provider, many facilities | ontology red flag rfSameProviderManyFacilities · report: Khyber audit, ghost hospitalisation | 7 · 0 % (random NMC collisions in synthetic data) |
+| R8 (new) | Service frequency beyond the diagnosis | the same service for the same person more than 4 (consultations) / 3 (lab) / 2 (imaging) times in 30 days, dialysis and chemotherapy protocols exempt | repeated tests and visits beyond the protocol — the "random tests" HIB's 10 % co-payment targets | medium +2 | unnecessary services / service frequency anomaly | report: HIB co-payment (Jan 2024), Taiwan NHI duplicate-service check, HIRA DUR · openIMIS reason 5 never runs | 7 · 43 % |
+
+Revisions from the validation book: **R1** adds a medium variant for the identical bill re-entered 1–14 days later (dialysis / chemotherapy exempt); **R3** carries medium weight on a composite-identity match (could be a namesake); **R4** exempts a same-day discharge-to-admission for the same diagnosis (a transfer) and adds a medium variant for overlapping stays at the same facility (phantom re-admission); **R5** looks back 14 days and fires only when the resubmission introduces a code the rejected claim did not have (an honest correction removes a line); **STG** adds unnecessary admission. **Subsumption:** when R3 and R4 hit the same matched claim, R4 is recorded with 0 points (the demo claim now scores 3, not 6). The Rules page shows a redundancy review table (R1/R2, R3/R4, R1/R8, R4/R2, STG/reason 10, R5/Engine 1, R6/all, R7/R6, weights).
 
 Each rule card on the Rules page opens to **where it comes from** (Week 2 catalog entry, openIMIS code line, interview note, standard) and **where it fails** (measured on the validation book). A third table lists **known red flags not encoded** and why: missing NMC number (a completeness check), one NMC number at many facilities (needs a provider profile, candidate R6), service after death (needs the civil register), ghost visits and same-facility phantom re-admissions (invisible on a single claim), upcoding inside the protocol (needs peer benchmarking), forged documents / card sharing / collusion (outside claim data).
 
@@ -153,7 +158,7 @@ Each flag the app shows carries: rule, name, weight (+points), a **Because:** se
 *"The claims waiting for a Medical Officer. Today HIB picks a random 5 % sample; our layer ranks by suspicion and says why. Click a row to review it."*
 
 - Two modes: **Ranked by suspicion (ours)** and **5 % random sample (today)**; a checkbox shows the synthetic ground truth.
-- Two cards: *Our ranked queue — N frauds in the top M claims (F flagged in total), every one with a rule and a reason* vs *Random 5 % sample — n frauds among m randomly drawn claims, the same reviewer effort, no explanation.* On the book: **418** frauds in the ranked queue against **17–32** in the random sample (the random draw varies with the seed: 17 in the evaluation run, 32 in the app's live draw), for the same budget of about 489 claims.
+- Two cards: *Our ranked queue — N frauds in the top M claims (F flagged in total), every one with a rule and a reason* vs *Random 5 % sample — n frauds among m randomly drawn claims, the same reviewer effort, no explanation.* On the training book: **418** frauds in the ranked queue against **14–34** in the random sample (the random draw varies with the seed: 17 in the evaluation run, 32 in the app's live draw), for the same budget of about 489 claims.
 - Columns: #, claim no. (with "yours" for claims submitted in this session), patient (NID / no NID · member no.), scheme, facility (district), diagnosis, dates (OPD / IPD), claimed NPR, rules, suspicion, ground truth (optional).
 
 ---

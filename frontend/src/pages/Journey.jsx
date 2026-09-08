@@ -22,7 +22,7 @@ const STEPS = [
   { key: 'enter', owner: 'facility', short: ['Entered in', 'openIMIS'], phase: 'submit', title: 'Entered in openIMIS', sub: 'Keyed in manually, or sent by an EMR as a FHIR claim.', actor: 'Hospital claim admin' },
   { key: 'facility_verify', owner: 'facility', short: ['Facility check', 'and submission'], phase: 'submit', title: 'Facility verification and submission', sub: 'The facility checks its own claim against HIB\'s usual rejection causes.', actor: 'Hospital claim admin' },
   { key: 'system_verify', owner: 'openimis', short: ['System', 'verification'], phase: 'submit', title: 'System verification by openIMIS', sub: 'The existing edits — each one looks at this claim alone.', actor: 'openIMIS · validate_claim' },
-  { key: 'proposed_layer', owner: 'ours', short: ['Identity and', 'cross-claim', 'rules'], phase: 'submit', title: 'Identity resolution and cross-claim rules', sub: 'The only step that compares this claim with others — across facilities and across schemes.', actor: 'Knowledge-based layer', proposed: true },
+  { key: 'proposed_layer', owner: 'ours', short: ['Identity and', 'cross-claim', 'rules'], phase: 'submit', title: 'Identity resolution and cross-claim rules', sub: 'The only step that compares this claim with others — across facilities, across schemes, and against the provider.', actor: 'Knowledge-based layer', proposed: true },
   { key: 'completeness', owner: 'desk', short: ['Completeness', 'check'], phase: 'adjudicate', title: 'Completeness check', sub: 'The scheme opens the claim and its attachments.', actor: 'HIB claims desk' },
   { key: 'benefit_verify', owner: 'desk', short: ['Benefit', 'package check'], phase: 'adjudicate', title: 'Verification against the benefit package', sub: 'Covered, priced, within the ceiling?', actor: 'HIB claims desk' },
   { key: 'manual_review', owner: 'mo', short: ['Ranked', 'review queue'], phase: 'adjudicate', title: 'The review queue', sub: 'Today a random 5 % sample; proposed, a ranked queue with reasons.', actor: 'Medical Officers', proposed: true },
@@ -122,8 +122,8 @@ export default function Journey() {
       <div className="vs-head">★ Where this study adds value</div>
       <p className="vs-today">openIMIS checks each claim alone, its duplicate rule is switched off, and reviewers get a random 5 % sample. We add three hops:</p>
       <div className="vs-items">
-        <button className={cur.key === 'proposed_layer' ? 'on' : ''} onClick={() => jumpTo(idx('proposed_layer'))}><b>8</b><span><i>Sees across facilities and schemes.</i> 418 of 454 frauds at 92 % precision on our own book; about half on an independent book (see the dashboard). The existing engine catches 4.</span></button>
-        <button className={cur.key === 'manual_review' ? 'on' : ''} onClick={() => jumpTo(idx('manual_review'))}><b>11</b><span><i>A ranked queue with reasons.</i> Same reviewer budget: 418 frauds reached instead of 14–34; 9× more on the independent book too.</span></button>
+        <button className={cur.key === 'proposed_layer' ? 'on' : ''} onClick={() => jumpTo(idx('proposed_layer'))}><b>8</b><span><i>Sees across facilities and schemes.</i> Nine rules: 92 % of planted frauds on our own synthetic book (88 % precision), 74 % on an independent synthetic book at 50 % precision — see the dashboard. The existing engine catches 4 of 454.</span></button>
+        <button className={cur.key === 'manual_review' ? 'on' : ''} onClick={() => jumpTo(idx('manual_review'))}><b>11</b><span><i>A ranked queue with reasons.</i> Same reviewer budget: 418 frauds reached instead of 14–34 on our book; 189 instead of about 14 on the independent book.</span></button>
         <button className={cur.key === 'decision' ? 'on' : ''} onClick={() => jumpTo(idx('decision'))}><b>12</b><span><i>Every decision teaches the rules.</i> Confirm, clear or release is recorded per rule.</span></button>
       </div>
     </aside>

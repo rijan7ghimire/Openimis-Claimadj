@@ -10,7 +10,7 @@ export default function Providers() {
   if (!p) return <div className="page"><p className="mute">Loading…</p></div>;
   return <div className="page plain">
     <div className="center">
-      <div className="eyebrow">Provider view · candidate rule R6</div>
+      <div className="eyebrow">Provider view · rule R6 · synthetic claim book</div>
       <h1 style={{ fontSize: '1.7rem', marginTop: '.3rem' }}>Facilities and doctors</h1>
       <p className="lead">Claims are flagged one at a time, but fraud clusters. Ranking facilities by their flag rate and doctors by their busiest day turns the same flags into a provider profile — the view HIB's Medical Officers and India's PM-JAY anti-fraud unit actually work from.</p>
     </div>
@@ -38,7 +38,7 @@ export default function Providers() {
     </div> : <p className="mute">None in this book.</p>}
 
     <div className="card teal mt">
-      <b className="navy">What R6 would say.</b> <span className="small">IF a facility's flag rate is more than three times the median over the last 90 days, OR one NMC number bills at more than one facility on the same day, THEN raise the weight of every flag from that provider by 1 and put the facility on the audit list — BECAUSE fraud is a repeated behaviour of a few providers, and a provider profile catches what a single claim cannot (ghost visits, phantom re-admissions, within-protocol upcoding). Not implemented yet; see the <Link to="/dashboard">dashboard</Link> for the misses it would address.</span>
+      <b className="navy">What R6 would say.</b> <span className="small">IF a facility's flag rate is more than three times the median over the last 90 days, OR one NMC number bills at more than one facility on the same day, THEN raise the weight of every flag from that provider by 1 and put the facility on the audit list — BECAUSE fraud is a repeated behaviour of a few providers, and a provider profile catches what a single claim cannot (ghost visits, phantom re-admissions, within-protocol upcoding). Now implemented as R6 (low weight, judged on the facility's last 100 claims); the doctor signal is R7. See the <Link to="/rules">Rules page</Link>.</span>
     </div>
   </div>;
 }
