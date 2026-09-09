@@ -151,6 +151,6 @@ export default function Rules() {
       <table className="params"><thead><tr><th>Reason</th><th>Edit</th><th>What it checks</th><th>State</th></tr></thead>
         <tbody>{EXISTING.map(([code, name, what, st]) => <tr key={code}><td>{code}</td><td className="small bold">{name}</td><td className="small">{what}</td><td><span className={`std-tag ${st === 'active' ? 'used' : st === 'off' ? 'partial' : 'no'}`}>{st}</span></td></tr>)}</tbody></table>
     </div>
-    <p className="std-note mt">The existing edits look at one claim at a time, so a duplicate, a cross-scheme claim or an off-protocol treatment passes them all. That is the gap the rules above fill. See the <Link to="/ontology">Ontology</Link> for the vocabulary, the <Link to="/providers">Providers</Link> view for R6 and R7 as tables, and the <Link to="/dashboard">Dashboard</Link> for the honest results on both synthetic books.</p>
+    <p className="std-note mt">The existing edits look at one claim at a time, so a duplicate, a cross-scheme claim or an off-protocol treatment passes them all. That is the gap the rules above fill. See the <Link to="/algorithm">Algorithm</Link> page for how the flags become a ranked queue (flowchart, sensitivity sweeps and a drop-one-rule ablation), the <Link to="/ontology">Ontology</Link> for the vocabulary, the <Link to="/providers">Providers</Link> view for R6 and R7 as tables, and the <Link to="/dashboard">Dashboard</Link> for the honest results on both synthetic books.</p>
   </div>;
 }

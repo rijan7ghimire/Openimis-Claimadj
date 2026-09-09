@@ -77,7 +77,8 @@ export default function Dashboard() {
 
     <div className="grid grid-2 mt">
       <div className="card teal row between wrap"><div><b className="navy">Rules &amp; parameters</b><div className="small">Every rule and threshold, where each rule came from, and the red flags we know but have not encoded.</div></div><Link className="btn navy" to="/rules">Open →</Link></div>
-      <div className="card teal row between wrap"><div><b className="navy">Providers</b><div className="small">Facilities by flag rate and doctors by busiest day — the view a provider rule (R6) would use.</div></div><Link className="btn navy" to="/providers">Open →</Link></div>
+      <div className="card teal row between wrap"><div><b className="navy">Providers</b><div className="small">Facilities by flag rate and doctors by busiest day — the tables behind R6 and R7.</div></div><Link className="btn navy" to="/providers">Open →</Link></div>
+      <div className="card teal row between wrap"><div><b className="navy">Algorithm</b><div className="small">How a claim gets its place in the queue: the flowchart, precision@k, a drop-one-rule ablation and parameter sweeps from the notebook.</div></div><Link className="btn navy" to="/algorithm">Open →</Link></div>
     </div>
     <div className="grid grid-2 mt">
       <div className="card"><h3>Recall by fraud type (this book)</h3>

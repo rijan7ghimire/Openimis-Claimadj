@@ -1,0 +1,1261 @@
+{
+ "generated_at": "2026-09-09 16:19",
+ "note": "All claims synthetic. Produced by claim_ranking.ipynb (Week 5/ranking_notebook); numbers identical to the app engine.",
+ "rules": {
+  "R1": {
+   "name": "Within-scheme duplicate (same day, or identical bill within 14 days)",
+   "weight": "high",
+   "points": 3,
+   "source": "rule catalog R1 · openIMIS reason 6 (disabled) · validation book: re-bills lag 0–14 d"
+  },
+  "R2": {
+   "name": "Same-episode split billing (vault)",
+   "weight": "medium",
+   "points": 2,
+   "source": "rule catalog R2 · SSF claim vault (facility + contributor + visit date)"
+  },
+  "R3": {
+   "name": "Cross-scheme duplicate (HIB ↔ SSF)",
+   "weight": "high",
+   "points": 3,
+   "source": "rule catalog R3 · independent ledgers · composite identity → medium"
+  },
+  "R4": {
+   "name": "Overlapping inpatient stays (transfer-aware)",
+   "weight": "high",
+   "points": 3,
+   "source": "rule catalog R4 · \"impossible day\" · report: ghost / phantom hospitalisation"
+  },
+  "R5": {
+   "name": "Resubmission gaming (new code after a rejection)",
+   "weight": "medium",
+   "points": 2,
+   "source": "rule catalog R5 · edit-gaming attack surface · validation book: honest corrections"
+  },
+  "STG": {
+   "name": "Off-protocol services, over-long stay or unnecessary admission",
+   "weight": "medium",
+   "points": 2,
+   "source": "HIB expert interview: standard treatment protocol · reason 8 (ICD) disabled · report: medical necessity"
+  },
+  "R6": {
+   "name": "Provider concentration (facility flag rate far above peers)",
+   "weight": "low",
+   "points": 1,
+   "source": "report: peer benchmarking, PM-JAY provider profiling and de-empanelment"
+  },
+  "R7": {
+   "name": "One doctor, two facilities, same day",
+   "weight": "low",
+   "points": 1,
+   "source": "ontology red flag rfSameProviderManyFacilities · report: ghost hospitalisation, duty-hour billing"
+  },
+  "R8": {
+   "name": "Service frequency beyond what the diagnosis warrants",
+   "weight": "medium",
+   "points": 2,
+   "source": "report: unnecessary tests (HIB 10 % co-payment, Jan 2024) · Taiwan NHI duplicate-service check · HIRA DUR"
+  }
+ },
+ "params": {
+  "weights": {
+   "high": 3,
+   "medium": 2,
+   "low": 1
+  },
+  "r3_window_days": 2,
+  "r1_near_days": 14,
+  "r5_lookback_days": 14,
+  "r8_window_days": 30,
+  "r6_min_claims": 20,
+  "r6_rate_factor": 3.0,
+  "r6_min_rate": 0.25,
+  "facility_window": 100,
+  "doctor_window": 40,
+  "budget_share": 0.05,
+  "enabled": null,
+  "learn_delta": 0.5,
+  "weight_bounds": [
+   0.5,
+   5.0
+  ]
+ },
+ "books": {
+  "A": {
+   "name": "A · training book (seed 42)",
+   "claims": 9786,
+   "persons": 8037,
+   "frauds": 454,
+   "fraud_rate": 0.0464,
+   "flagged": 474,
+   "tp": 418,
+   "fp": 56,
+   "fn": 36,
+   "precision": 0.8819,
+   "recall": 0.9207,
+   "budget": 489,
+   "ranked_frauds": 418,
+   "random_mean": 25.3,
+   "random_min": 15,
+   "random_max": 31,
+   "precision_top50": 0.96,
+   "precision_at_budget": 0.882,
+   "existing_rejected": 1011,
+   "existing_rejected_fraud": 4,
+   "by_rule": {
+    "R2": {
+     "fired": 108,
+     "fraud": 85
+    },
+    "R1": {
+     "fired": 147,
+     "fraud": 131
+    },
+    "R5": {
+     "fired": 51,
+     "fraud": 49
+    },
+    "R4": {
+     "fired": 64,
+     "fraud": 62
+    },
+    "R3": {
+     "fired": 72,
+     "fraud": 69
+    },
+    "STG": {
+     "fired": 71,
+     "fraud": 71
+    },
+    "R8": {
+     "fired": 7,
+     "fraud": 3
+    },
+    "R7": {
+     "fired": 7,
+     "fraud": 0
+    }
+   },
+   "by_type": {
+    "same_episode": {
+     "planted": 83,
+     "caught": 83
+    },
+    "within_dup": {
+     "planted": 124,
+     "caught": 124
+    },
+    "resubmission": {
+     "planted": 49,
+     "caught": 49
+    },
+    "impossible_overlap": {
+     "planted": 33,
+     "caught": 31
+    },
+    "cross_scheme": {
+     "planted": 70,
+     "caught": 68
+    },
+    "stg_upcode": {
+     "planted": 66,
+     "caught": 63
+    },
+    "cross_scheme (hard: no NID + name variant)": {
+     "planted": 29,
+     "caught": 0
+    }
+   }
+  },
+  "B": {
+   "name": "B · validation book (seed 2026)",
+   "claims": 6825,
+   "persons": 5589,
+   "frauds": 261,
+   "fraud_rate": 0.0382,
+   "flagged": 386,
+   "tp": 193,
+   "fp": 193,
+   "fn": 68,
+   "precision": 0.5,
+   "recall": 0.7395,
+   "budget": 341,
+   "ranked_frauds": 189,
+   "random_mean": 13.2,
+   "random_min": 6,
+   "random_max": 20,
+   "precision_top50": 0.72,
+   "precision_at_budget": 0.554,
+   "existing_rejected": 577,
+   "existing_rejected_fraud": 0,
+   "by_rule": {
+    "R2": {
+     "fired": 16,
+     "fraud": 16
+    },
+    "R4": {
+     "fired": 52,
+     "fraud": 49
+    },
+    "R1": {
+     "fired": 80,
+     "fraud": 49
+    },
+    "STG": {
+     "fired": 45,
+     "fraud": 27
+    },
+    "R3": {
+     "fired": 58,
+     "fraud": 43
+    },
+    "R5": {
+     "fired": 83,
+     "fraud": 39
+    },
+    "R8": {
+     "fired": 23,
+     "fraud": 7
+    },
+    "R7": {
+     "fired": 3,
+     "fraud": 0
+    },
+    "R6": {
+     "fired": 111,
+     "fraud": 33
+    }
+   },
+   "by_type": {
+    "same_episode": {
+     "planted": 20,
+     "caught": 20
+    },
+    "within_dup": {
+     "planted": 38,
+     "caught": 32
+    },
+    "stg_upcode": {
+     "planted": 21,
+     "caught": 21
+    },
+    "cross_scheme": {
+     "planted": 71,
+     "caught": 47
+    },
+    "phantom_readmission": {
+     "planted": 31,
+     "caught": 31
+    },
+    "resubmission": {
+     "planted": 42,
+     "caught": 38
+    },
+    "upcode_within_protocol": {
+     "planted": 15,
+     "caught": 2
+    },
+    "phantom_visit": {
+     "planted": 23,
+     "caught": 2
+    }
+   }
+  }
+ },
+ "sweeps": [
+  {
+   "parameter": "R3 window (days)",
+   "value": 0.0,
+   "A precision %": 88.2,
+   "A recall %": 87.7,
+   "A frauds @ budget": 398.0,
+   "B precision %": 49.4,
+   "B recall %": 66.7,
+   "B frauds @ budget": 174.0
+  },
+  {
+   "parameter": "R3 window (days)",
+   "value": 1.0,
+   "A precision %": 88.7,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 49.9,
+   "B recall %": 71.3,
+   "B frauds @ budget": 183.0
+  },
+  {
+   "parameter": "R3 window (days)",
+   "value": 2.0,
+   "A precision %": 88.2,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 50.0,
+   "B recall %": 73.9,
+   "B frauds @ budget": 189.0
+  },
+  {
+   "parameter": "R3 window (days)",
+   "value": 3.0,
+   "A precision %": 87.3,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 51.3,
+   "B recall %": 75.5,
+   "B frauds @ budget": 193.0
+  },
+  {
+   "parameter": "R3 window (days)",
+   "value": 5.0,
+   "A precision %": 86.5,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 52.3,
+   "B recall %": 78.2,
+   "B frauds @ budget": 199.0
+  },
+  {
+   "parameter": "R1 identical-bill window (days)",
+   "value": 0.0,
+   "A precision %": 89.1,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 53.0,
+   "B recall %": 67.4,
+   "B frauds @ budget": 176.0
+  },
+  {
+   "parameter": "R1 identical-bill window (days)",
+   "value": 7.0,
+   "A precision %": 88.4,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 51.9,
+   "B recall %": 73.9,
+   "B frauds @ budget": 191.0
+  },
+  {
+   "parameter": "R1 identical-bill window (days)",
+   "value": 14.0,
+   "A precision %": 88.2,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 50.0,
+   "B recall %": 73.9,
+   "B frauds @ budget": 189.0
+  },
+  {
+   "parameter": "R1 identical-bill window (days)",
+   "value": 21.0,
+   "A precision %": 88.0,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 49.7,
+   "B recall %": 73.9,
+   "B frauds @ budget": 188.0
+  },
+  {
+   "parameter": "R1 identical-bill window (days)",
+   "value": 30.0,
+   "A precision %": 86.9,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 49.4,
+   "B recall %": 73.9,
+   "B frauds @ budget": 188.0
+  },
+  {
+   "parameter": "R5 look-back (days)",
+   "value": 7.0,
+   "A precision %": 88.4,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 50.0,
+   "B recall %": 67.8,
+   "B frauds @ budget": 176.0
+  },
+  {
+   "parameter": "R5 look-back (days)",
+   "value": 14.0,
+   "A precision %": 88.2,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 50.0,
+   "B recall %": 73.9,
+   "B frauds @ budget": 189.0
+  },
+  {
+   "parameter": "R5 look-back (days)",
+   "value": 21.0,
+   "A precision %": 88.0,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 48.2,
+   "B recall %": 73.9,
+   "B frauds @ budget": 188.0
+  },
+  {
+   "parameter": "reviewer budget (share of book)",
+   "value": 0.02,
+   "A precision %": 88.2,
+   "A recall %": 92.1,
+   "A frauds @ budget": 184.0,
+   "B precision %": 50.0,
+   "B recall %": 73.9,
+   "B frauds @ budget": 105.0
+  },
+  {
+   "parameter": "reviewer budget (share of book)",
+   "value": 0.05,
+   "A precision %": 88.2,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 50.0,
+   "B recall %": 73.9,
+   "B frauds @ budget": 189.0
+  },
+  {
+   "parameter": "reviewer budget (share of book)",
+   "value": 0.1,
+   "A precision %": 88.2,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 50.0,
+   "B recall %": 73.9,
+   "B frauds @ budget": 193.0
+  }
+ ],
+ "ablation": [
+  {
+   "rules": "all nine (baseline)",
+   "A precision %": 88.2,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 50.0,
+   "B recall %": 73.9,
+   "B frauds @ budget": 189.0,
+   "A Δrecall": 0.0,
+   "B Δrecall": 0.0
+  },
+  {
+   "rules": "without R1",
+   "A precision %": 88.7,
+   "A recall %": 70.7,
+   "A frauds @ budget": 321.0,
+   "B precision %": 52.5,
+   "B recall %": 63.6,
+   "B frauds @ budget": 166.0,
+   "A Δrecall": -21.4,
+   "B Δrecall": -10.3
+  },
+  {
+   "rules": "without R2",
+   "A precision %": 91.2,
+   "A recall %": 75.6,
+   "A frauds @ budget": 343.0,
+   "B precision %": 50.1,
+   "B recall %": 70.1,
+   "B frauds @ budget": 181.0,
+   "A Δrecall": -16.5,
+   "B Δrecall": -3.8
+  },
+  {
+   "rules": "without R3",
+   "A precision %": 87.0,
+   "A recall %": 78.2,
+   "A frauds @ budget": 355.0,
+   "B precision %": 50.8,
+   "B recall %": 59.8,
+   "B frauds @ budget": 156.0,
+   "A Δrecall": -13.9,
+   "B Δrecall": -14.1
+  },
+  {
+   "rules": "without R4",
+   "A precision %": 87.9,
+   "A recall %": 86.8,
+   "A frauds @ budget": 394.0,
+   "B precision %": 52.5,
+   "B recall %": 64.0,
+   "B frauds @ budget": 167.0,
+   "A Δrecall": -5.3,
+   "B Δrecall": -9.9
+  },
+  {
+   "rules": "without R5",
+   "A precision %": 87.3,
+   "A recall %": 81.7,
+   "A frauds @ budget": 371.0,
+   "B precision %": 54.0,
+   "B recall %": 62.5,
+   "B frauds @ budget": 163.0,
+   "A Δrecall": -10.4,
+   "B Δrecall": -11.4
+  },
+  {
+   "rules": "without STG",
+   "A precision %": 86.4,
+   "A recall %": 78.6,
+   "A frauds @ budget": 357.0,
+   "B precision %": 53.9,
+   "B recall %": 65.9,
+   "B frauds @ budget": 172.0,
+   "A Δrecall": -13.5,
+   "B Δrecall": -8.0
+  },
+  {
+   "rules": "without R6",
+   "A precision %": 88.2,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 61.6,
+   "B recall %": 71.3,
+   "B frauds @ budget": 186.0,
+   "A Δrecall": 0.0,
+   "B Δrecall": -2.6
+  },
+  {
+   "rules": "without R7",
+   "A precision %": 89.5,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 50.4,
+   "B recall %": 73.9,
+   "B frauds @ budget": 189.0,
+   "A Δrecall": 0.0,
+   "B Δrecall": 0.0
+  },
+  {
+   "rules": "without R8",
+   "A precision %": 88.7,
+   "A recall %": 92.1,
+   "A frauds @ budget": 418.0,
+   "B precision %": 51.6,
+   "B recall %": 73.2,
+   "B frauds @ budget": 189.0,
+   "A Δrecall": 0.0,
+   "B Δrecall": -0.7
+  }
+ ],
+ "learning": {
+  "decisions": 150,
+  "final_weights": {
+   "R1": 5.0,
+   "R2": 5.0,
+   "R3": 4.5,
+   "R4": 5.0,
+   "R5": 3.0,
+   "STG": 5.0,
+   "R6": 1.0,
+   "R7": 1.0,
+   "R8": 3.0
+  },
+  "changes_logged": 198
+ },
+ "precision_at_k": {
+  "A": [
+   [
+    1,
+    1
+   ],
+   [
+    6,
+    6
+   ],
+   [
+    11,
+    11
+   ],
+   [
+    16,
+    16
+   ],
+   [
+    21,
+    21
+   ],
+   [
+    26,
+    26
+   ],
+   [
+    31,
+    31
+   ],
+   [
+    36,
+    36
+   ],
+   [
+    41,
+    39
+   ],
+   [
+    46,
+    44
+   ],
+   [
+    51,
+    49
+   ],
+   [
+    56,
+    54
+   ],
+   [
+    61,
+    59
+   ],
+   [
+    66,
+    64
+   ],
+   [
+    71,
+    69
+   ],
+   [
+    76,
+    73
+   ],
+   [
+    81,
+    78
+   ],
+   [
+    86,
+    83
+   ],
+   [
+    91,
+    88
+   ],
+   [
+    96,
+    92
+   ],
+   [
+    101,
+    97
+   ],
+   [
+    106,
+    101
+   ],
+   [
+    111,
+    106
+   ],
+   [
+    116,
+    111
+   ],
+   [
+    121,
+    116
+   ],
+   [
+    126,
+    120
+   ],
+   [
+    131,
+    124
+   ],
+   [
+    136,
+    129
+   ],
+   [
+    141,
+    133
+   ],
+   [
+    146,
+    138
+   ],
+   [
+    151,
+    142
+   ],
+   [
+    156,
+    146
+   ],
+   [
+    161,
+    151
+   ],
+   [
+    166,
+    154
+   ],
+   [
+    171,
+    159
+   ],
+   [
+    176,
+    164
+   ],
+   [
+    181,
+    169
+   ],
+   [
+    186,
+    174
+   ],
+   [
+    191,
+    179
+   ],
+   [
+    196,
+    184
+   ],
+   [
+    201,
+    189
+   ],
+   [
+    206,
+    194
+   ],
+   [
+    211,
+    199
+   ],
+   [
+    216,
+    204
+   ],
+   [
+    221,
+    209
+   ],
+   [
+    226,
+    212
+   ],
+   [
+    231,
+    217
+   ],
+   [
+    236,
+    222
+   ],
+   [
+    241,
+    227
+   ],
+   [
+    246,
+    231
+   ],
+   [
+    251,
+    234
+   ],
+   [
+    256,
+    239
+   ],
+   [
+    261,
+    243
+   ],
+   [
+    266,
+    247
+   ],
+   [
+    271,
+    251
+   ],
+   [
+    276,
+    254
+   ],
+   [
+    281,
+    258
+   ],
+   [
+    286,
+    261
+   ],
+   [
+    291,
+    266
+   ],
+   [
+    296,
+    269
+   ],
+   [
+    301,
+    274
+   ],
+   [
+    306,
+    279
+   ],
+   [
+    311,
+    283
+   ],
+   [
+    316,
+    286
+   ],
+   [
+    321,
+    290
+   ],
+   [
+    326,
+    293
+   ],
+   [
+    331,
+    298
+   ],
+   [
+    336,
+    303
+   ],
+   [
+    341,
+    308
+   ],
+   [
+    346,
+    312
+   ],
+   [
+    351,
+    317
+   ],
+   [
+    356,
+    322
+   ],
+   [
+    361,
+    325
+   ],
+   [
+    366,
+    329
+   ],
+   [
+    371,
+    334
+   ],
+   [
+    376,
+    338
+   ],
+   [
+    381,
+    342
+   ],
+   [
+    386,
+    347
+   ],
+   [
+    391,
+    351
+   ],
+   [
+    396,
+    355
+   ],
+   [
+    401,
+    360
+   ],
+   [
+    406,
+    363
+   ],
+   [
+    411,
+    368
+   ],
+   [
+    416,
+    372
+   ],
+   [
+    421,
+    377
+   ],
+   [
+    426,
+    382
+   ],
+   [
+    431,
+    387
+   ],
+   [
+    436,
+    390
+   ],
+   [
+    441,
+    395
+   ],
+   [
+    446,
+    398
+   ],
+   [
+    451,
+    403
+   ],
+   [
+    456,
+    407
+   ],
+   [
+    461,
+    412
+   ],
+   [
+    466,
+    417
+   ],
+   [
+    471,
+    418
+   ]
+  ],
+  "B": [
+   [
+    1,
+    1
+   ],
+   [
+    6,
+    5
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    16,
+    12
+   ],
+   [
+    21,
+    15
+   ],
+   [
+    26,
+    19
+   ],
+   [
+    31,
+    24
+   ],
+   [
+    36,
+    27
+   ],
+   [
+    41,
+    28
+   ],
+   [
+    46,
+    33
+   ],
+   [
+    51,
+    36
+   ],
+   [
+    56,
+    39
+   ],
+   [
+    61,
+    44
+   ],
+   [
+    66,
+    48
+   ],
+   [
+    71,
+    53
+   ],
+   [
+    76,
+    57
+   ],
+   [
+    81,
+    62
+   ],
+   [
+    86,
+    65
+   ],
+   [
+    91,
+    69
+   ],
+   [
+    96,
+    74
+   ],
+   [
+    101,
+    78
+   ],
+   [
+    106,
+    83
+   ],
+   [
+    111,
+    88
+   ],
+   [
+    116,
+    93
+   ],
+   [
+    121,
+    96
+   ],
+   [
+    126,
+    100
+   ],
+   [
+    131,
+    101
+   ],
+   [
+    136,
+    104
+   ],
+   [
+    141,
+    107
+   ],
+   [
+    146,
+    109
+   ],
+   [
+    151,
+    111
+   ],
+   [
+    156,
+    113
+   ],
+   [
+    161,
+    116
+   ],
+   [
+    166,
+    118
+   ],
+   [
+    171,
+    122
+   ],
+   [
+    176,
+    127
+   ],
+   [
+    181,
+    132
+   ],
+   [
+    186,
+    134
+   ],
+   [
+    191,
+    136
+   ],
+   [
+    196,
+    139
+   ],
+   [
+    201,
+    143
+   ],
+   [
+    206,
+    146
+   ],
+   [
+    211,
+    149
+   ],
+   [
+    216,
+    152
+   ],
+   [
+    221,
+    153
+   ],
+   [
+    226,
+    155
+   ],
+   [
+    231,
+    157
+   ],
+   [
+    236,
+    159
+   ],
+   [
+    241,
+    161
+   ],
+   [
+    246,
+    163
+   ],
+   [
+    251,
+    165
+   ],
+   [
+    256,
+    169
+   ],
+   [
+    261,
+    173
+   ],
+   [
+    266,
+    176
+   ],
+   [
+    271,
+    176
+   ],
+   [
+    276,
+    177
+   ],
+   [
+    281,
+    178
+   ],
+   [
+    286,
+    180
+   ],
+   [
+    291,
+    181
+   ],
+   [
+    296,
+    183
+   ],
+   [
+    301,
+    186
+   ],
+   [
+    306,
+    186
+   ],
+   [
+    311,
+    187
+   ],
+   [
+    316,
+    188
+   ],
+   [
+    321,
+    188
+   ],
+   [
+    326,
+    188
+   ],
+   [
+    331,
+    188
+   ],
+   [
+    336,
+    188
+   ],
+   [
+    341,
+    189
+   ],
+   [
+    346,
+    189
+   ],
+   [
+    351,
+    190
+   ],
+   [
+    356,
+    191
+   ],
+   [
+    361,
+    191
+   ],
+   [
+    366,
+    191
+   ],
+   [
+    371,
+    192
+   ],
+   [
+    376,
+    192
+   ],
+   [
+    381,
+    193
+   ],
+   [
+    386,
+    193
+   ]
+  ]
+ },
+ "figures": [
+  "fig_dataset.png",
+  "fig_rules.png",
+  "fig_precision_at_k.png",
+  "fig_ablation.png",
+  "fig_weights.png",
+  "fig_recall_by_type.png",
+  "algorithm_flowchart.png"
+ ]
+}

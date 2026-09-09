@@ -179,6 +179,29 @@ Each flag the app shows carries: rule, name, weight (+points), a **Because:** se
 
 *Claims are flagged one at a time, but fraud clusters.* Facilities ranked by flag rate (with the median flag rate as baseline; red = more than three times the median), doctors ranked by the most claims in one day (with facilities count and busiest date), and facilities with two or more R5 flags. Closes with the candidate rule **R6**: if a facility's flag rate is more than three times the median over 90 days, or one NMC number bills at more than one facility on the same day, raise the weight of every flag from that provider by 1 and put the facility on the audit list — because fraud is a repeated behaviour of a few providers. Not implemented.
 
+## 7c · Algorithm page
+
+*How a claim gets its place in the queue — the flowchart, the eight steps, and the readings from the program (`notebook/claim_ranking.ipynb`, a line-for-line Python port of the engine that reproduces the app's numbers exactly). All figures and numbers on the page come from `public/algorithm/results.json` and the PNGs the notebook writes.*
+
+**It is a weighted additive rule model (a scorecard), not a trained classifier.** Every claim is processed once, in submission order: (1) Engine 1, the openIMIS edits on the claim alone; (2) identity resolution, National ID else name + DOB + sex, the same key for HIB and SSF; (3) the claim history of that identity across schemes and facilities plus the facility's flag rate and the doctor's recent claims; (4) the rules — R1–R5 per earlier claim, R8 and STG per claim, R7 per doctor, R6 per facility — each hit a flag with a weight and a "because"; (5) scoring — R4 subsumed under R3 on the same matched claim, points = learned weight × confidence, suspicion = Σ points; (6) routing — any flag → Selected, none → paid; (7) ranking — the queue sorted by suspicion, cut at the 5 % budget; (8) learning — confirm +0.5, clear −0.5, bounded 0.5–5.
+
+**Readings (both synthetic books):**
+
+| | A · training (seed 42) | B · validation (seed 2026) |
+|---|---|---|
+| claims · planted fraud | 9,786 · 454 (4.6 %) | 6,825 · 261 (3.8 %) |
+| precision · recall | 88.2 % · 92.1 % | 50.0 % · 73.9 % |
+| frauds at the 5 % budget: ranked vs random (mean of 30 draws) | 418 vs ≈ 25 (app's own draw: 23) | 189 vs ≈ 13 (app: 13.6) |
+| precision in the top 50 · at the budget | 96 % · 88 % | 72 % · 55 % |
+
+- **Precision@k curve.** Ranked queue vs the expectation of a random sample; a straight line on A, bending after ≈ 250 claims on B where the false positives start.
+- **Per rule and suspicion.** Precision per rule on both books; 9,276 of 9,332 legitimate claims score 0 and never enter the queue; frauds score 2–7.
+- **Ablation** (one rule off, the whole book re-run): recall lost on A / B — R1 21 / 10, R2 16 / 4, R3 14 / 14, R4 5 / 10, R5 10 / 11, STG 14 / 8, R6 0 / 3, R7 0 / 0, R8 0 / 1. R6 is the only rule whose removal raises precision (B: 50 → 62 %).
+- **Sensitivity.** R3 window 0 / 2 / 5 days → B recall 67 / 74 / 78 % at precision 49 / 50 / 52 %; R1 identical-bill window 0 / 14 days → B recall 67 / 74 %; R5 look-back 7 / 14 days → B recall 68 / 74 %; budget 2 / 5 / 10 % → A frauds 184 / 418 / 418.
+- **Learning loop, simulated.** A reviewer decides the top 150 by ground truth: R1, R2, R4, STG rise to the 5.0 ceiling, R3 to 4.5, R5 and R8 settle at 3.0, R6 and R7 stay at 1.
+- **Recall by fraud type on both books** and **the two books in figures** (volume, amounts, planted fraud, identity coverage).
+- A "Reproduce it" card links to the notebook in the repository.
+
 ## 8 · Dashboard
 
 *"The Nepal synthetic book loaded in this app (9,786 claims, 8,037 people, 654 enrolled in both schemes, 43 % with a National ID). Ground truth is known, so the run scores itself."*

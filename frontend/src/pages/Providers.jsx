@@ -29,7 +29,7 @@ export default function Providers() {
         <tbody>{p.doctors.map(d => <tr key={d.nmc}><td className="mono">{d.nmc}</td><td className="right">{d.claims}</td><td className="right">{d.flagged}</td><td className="right">{d.facilities}</td>
           <td className={`right bold ${d.max_per_day >= 6 ? 'red' : ''}`}>{d.max_per_day}</td><td className="small mono">{d.busiest_day}</td><td className="right small">{npr(d.amount)}</td></tr>)}</tbody></table>
     </div>
-    <p className="std-note mt">A doctor billing at several facilities on the same day, or an implausible number of inpatients at once, is the red flag <span className="mono">rfSameProviderManyFacilities</span> in the ontology — known, not yet a rule.</p>
+    <p className="std-note mt">A doctor billing at several facilities on the same day, or an implausible number of inpatients at once, is the red flag <span className="mono">rfSameProviderManyFacilities</span> in the ontology — encoded as rule R7 (low weight). In the synthetic books every R7 hit is a random NMC collision, so its precision is 0 % there; on real claims the NMC number is the one provider field HIB already stores.</p>
 
     <h2>3 · Repeat resubmission gaming <small>facilities with two or more R5 flags</small></h2>
     {p.repeatR5.length ? <div className="card" style={{ padding: 0, overflow: 'auto' }}>
